@@ -1,0 +1,12 @@
+{
+  "id": "B",
+  "name": "Builder + reviewer, one fix round",
+  "description": "A builder solves the task, a read-only reviewer checks it, and the builder gets exactly one round to address CHANGES_NEEDED.",
+  "agents_dir": "configs/B/.claude/agents",
+  "stages": [
+    {"name": "build", "agent": "builder", "prompt": "solve.md", "mode": "write"},
+    {"name": "review", "agent": "reviewer", "prompt": "review.md", "mode": "read", "schema": "verdict"},
+    {"name": "fix", "agent": "builder", "prompt": "fix.md", "mode": "write",
+     "only_if": {"stage": "review", "field": "verdict", "equals": "CHANGES_NEEDED"}}
+  ]
+}

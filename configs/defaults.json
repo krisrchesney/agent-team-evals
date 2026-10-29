@@ -1,0 +1,21 @@
+{
+  "_comment": "Settings shared by every config. Keep the model and limits identical across A/B/C so only the team structure differs.",
+  "model": "sonnet",
+  "effort": null,
+  "bare": true,
+  "run_budget_usd": 2.00,
+  "stage_max_turns": 40,
+  "stage_timeout_s": 900,
+  "permission_mode": "acceptEdits",
+  "allowed_tools_write": ["Read", "Edit", "Write", "Glob", "Grep", "Bash(python -m unittest *)", "Bash(python -m py_compile *)", "Bash(git diff *)", "Bash(git status *)"],
+  "allowed_tools_read": ["Read", "Glob", "Grep", "Bash(python -m unittest *)", "Bash(git diff *)", "Bash(git status *)"],
+  "tools_write": "Bash,Read,Edit,Write,Glob,Grep",
+  "tools_read": "Bash,Read,Glob,Grep",
+  "work_root": "D:/ate-work",
+  "price_per_mtok": {
+    "_source": "Sonnet 5.5 / Opus 5.5 input, output and cache-read rates from the claude-api skill table (cached 2026-10-06). cache_write assumes the usual 1.25x input rate; check it before quoting. Used only for reporting token-based cost; billed cost comes from total_cost_usd.",
+    "sonnet": {"input": 2.00, "output": 10.00, "cache_read": 0.20, "cache_write": 2.50},
+    "opus":   {"input": 4.00, "output": 20.00, "cache_read": 0.20, "cache_write": 5.00}
+  },
+  "estimate_usd_per_stage": 0.20
+}

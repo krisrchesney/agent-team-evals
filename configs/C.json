@@ -1,0 +1,15 @@
+{
+  "id": "C",
+  "name": "Planner -> builder(s) -> reviewer",
+  "description": "A read-only planner splits the task into 1-3 subtasks, one builder run per subtask (sequential, same worktree), then the read-only reviewer and one fix round.",
+  "agents_dir": "configs/C/.claude/agents",
+  "max_subtasks": 3,
+  "stages": [
+    {"name": "plan", "agent": "planner", "prompt": "plan.md", "mode": "read", "schema": "plan"},
+    {"name": "build", "agent": "builder", "prompt": "build_subtask.md", "mode": "write",
+     "foreach": {"stage": "plan", "field": "subtasks"}},
+    {"name": "review", "agent": "reviewer", "prompt": "review.md", "mode": "read", "schema": "verdict"},
+    {"name": "fix", "agent": "builder", "prompt": "fix.md", "mode": "write",
+     "only_if": {"stage": "review", "field": "verdict", "equals": "CHANGES_NEEDED"}}
+  ]
+}

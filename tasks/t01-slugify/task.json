@@ -1,0 +1,8 @@
+{
+  "id": "t01-slugify",
+  "title": "Fix and extend slugify()",
+  "category": "bugfix+feature",
+  "difficulty": "easy",
+  "language": "python",
+  "test_timeout_s": 60
+}

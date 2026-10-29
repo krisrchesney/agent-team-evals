@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+# Dry-run results are throwaway; real sweeps in results/ are committed.
+results/*-dry*.jsonl
+# Transcripts and worktrees live in work_root (default D:/ate-work), outside the repo.

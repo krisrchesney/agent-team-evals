@@ -1,0 +1,8 @@
+{
+  "id": "t02-ttl-cache",
+  "title": "Add TTL expiry to an LRU cache",
+  "category": "feature",
+  "difficulty": "medium",
+  "language": "python",
+  "test_timeout_s": 60
+}

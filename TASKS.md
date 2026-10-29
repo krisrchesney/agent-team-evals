@@ -1,0 +1,175 @@
+# agent-team-evals backlog
+
+The shared board for every session. Statuses: Ready -> In progress -> Review -> Done.
+A ticket owns the files it lists. Two tickets in progress must never own the same file.
+Tickets marked **(user)** need the user's decision or money, so a session can't start them alone.
+
+Template:
+
+    ### T-<n>: <title>
+    Status: Ready | Blocked | In progress (branch) | Review (branch) | Done
+    Owns: <files>
+    Blocked by: <ticket, "user", or "none">
+    Why: <one or two lines>
+    Done when:
+    - [ ] <something a reviewer can check without asking anyone>
+
+## Ready (independent: these can run as parallel sessions)
+
+### T-2: Task t03: multi-file CSV report CLI
+Status: Ready
+Owns: tasks/t03-*/ (new folder only)
+Blocked by: none
+Why: The two existing tasks are single-file. A planner can only help if some tasks need
+changes in several files.
+Done when:
+- [ ] Starting repo has 3+ modules (e.g. reader, aggregate, cli) and thin visible tests
+- [ ] prompt.md has numbered requirements touching at least 2 modules; each hidden test cites one
+- [ ] `python -m ate validate --tasks t03` prints OK; `python scripts/check.py` passes
+
+### T-3: Task t04: subtle bug hunt (interval merging)
+Status: Ready
+Owns: tasks/t04-*/ (new folder only)
+Blocked by: none
+Why: Tests whether a second reader (the reviewer) catches what the builder missed.
+Done when:
+- [ ] Starting code has 2 or more independent bugs (e.g. touching intervals, unsorted input), and the prompt describes the expected behaviour, not the bugs
+- [ ] Hidden tests cover each bug separately, so partial credit shows which were found
+- [ ] `validate` OK; check.py passes
+
+### T-4: Task t05: spec with an ambiguity (config file + env overrides)
+Status: Ready
+Owns: tasks/t05-*/ (new folder only)
+Blocked by: none
+Why: Do teams handle under-specified prompts better? The prompt states one deliberately
+ambiguous point plus a sentence that resolves it, and only careful readers notice.
+Done when:
+- [ ] The resolving sentence is in prompt.md, and a hidden test checks the resolved behaviour
+- [ ] `validate` OK; check.py passes
+
+### T-5: Paired comparison in the report
+Status: Ready
+Owns: ate/report.py; tests/test_report.py (new)
+Blocked by: none
+Why: Configs see the same tasks, so comparing them task by task is more powerful than overall rates.
+Done when:
+- [ ] `report` prints, for each pair (B-A, C-A, C-B), the pass-rate difference with a 95% paired bootstrap CI that resamples tasks, not runs (fixed seed)
+- [ ] Also prints $ per passed task with the same CI method
+- [ ] Unit tests on a hand-made record list with a known answer; stdlib only
+
+### T-6: Chart script for the write-up
+Status: Ready
+Owns: scripts/plot.py (new); docs/figures/ (new)
+Blocked by: none
+Why: DESIGN §5: pass rate vs cost frontier, per-task grid, C's spend by stage.
+Done when:
+- [ ] `python scripts/plot.py results/<sweep>.jsonl` writes 3 PNGs to docs/figures/
+- [ ] matplotlib imported only in this script; a clear message if it isn't installed
+- [ ] Works on the dry-run oracle output; dry-run charts carry a "DRY RUN" watermark
+
+### T-7: Per-stage overrides in the pipeline
+Status: Ready
+Owns: ate/claude.py (StageSpec, build_command); ate/pipeline.py (only the StageSpec construction block in run_one); tests/test_overrides.py (new)
+Blocked by: none
+Why: T-10 (C-auto) needs a stage whose tools include `Agent`, and T-11 (config D) needs a
+per-config `--settings` file. Both are small additions to how a stage's command is built.
+Done when:
+- [ ] A stage in configs/*.json may set `tools`, `allowed_tools` and `settings` (a path under configs/); defaults still apply otherwise
+- [ ] The fairness test still holds: A/B/C produce the same commands as before (assert it)
+- [ ] check.py passes
+
+## Blocked
+
+### T-1: Smoke run (user): one task, config A, one rep
+Status: Blocked
+Owns: configs/defaults.json (`estimate_usd_per_stage` only); DESIGN.md §4 cost tables
+Blocked by: user. Needs `ANTHROPIC_API_KEY` set for the CLI (bare mode) and an OK for about $0.10-0.40
+Why: Every cost number in DESIGN.md is a guess until one real run exists. The smoke run also checks
+three things the dry run can't: `--agents` with `--agent` in bare mode, `structured_output` in the
+stream-json result event, and Windows quoting of `--allowedTools`.
+Command: `python -m ate run --tasks t01 --configs A --reps 1 --run-budget 0.5 --max-total-usd 0.5 --yes`
+Done when:
+- [ ] One real record in results/ with non-zero cost and tokens; `leak_suspected` empty
+- [ ] Then a one-rep B run on t01 (user OK, about $0.50) confirms the reviewer returns a parsed verdict
+- [ ] DESIGN §4 tables updated from measured numbers, with the sweep ids
+
+### T-8: Tasks t06-t15 (second batch)
+Status: Blocked
+Owns: tasks/t06-*/ ... tasks/t15-*/ (split into 2-3 tickets by the planner when unblocked)
+Blocked by: T-1 (calibrate difficulty: if A passes everything, the tasks are too easy to separate configs)
+Why: 5 tasks can't separate configs. DESIGN §3 needs 20-30.
+Done when:
+- [ ] Mix per DESIGN §1 categories; each passes `validate`
+
+### T-9: Config A2: equal-compute baseline (best of 2 single agents)
+Status: Blocked
+Owns: configs/A2.json (new); ate/pipeline.py (`run_one` loop only)
+Blocked by: T-7 (both touch pipeline.py)
+Why: Separates "more compute" from "better structure" (DESIGN §3). Two independent A attempts,
+keep the first whose visible tests pass.
+Done when:
+- [ ] Each attempt gets a fresh worktree; cost is summed over both attempts
+- [ ] Dry-run oracle passes; check.py passes
+
+### T-10: Config C-auto: Claude orchestrates the team itself
+Status: Blocked
+Owns: configs/C-auto.json (new); configs/C-auto/.claude/agents/ (new)
+Blocked by: T-7
+Why: Measures in-session subagent orchestration (one `claude -p` with a lead agent calling planner,
+builder and reviewer), as opposed to harness-driven C.
+Done when:
+- [ ] Single stage, lead agent with the Agent tool; roles copied unchanged from configs/C
+- [ ] Dry run passes; DESIGN §2 mentions it
+
+### T-11: Config D: single agent + Stop-hook test gate
+Status: Blocked
+Owns: configs/D.json (new); configs/D/ (new: settings + hook script)
+Blocked by: T-7
+Why: The Boxwatch hook pattern without a second agent. A cheap alternative to a reviewer.
+Done when:
+- [ ] The hook runs the visible tests (never the hidden ones) and blocks stopping once
+- [ ] Dry run passes
+
+### T-12: Parallel runs (`--jobs N`)
+Status: Blocked
+Owns: ate/__main__.py (sweep loop)
+Blocked by: T-1 (need real rate-limit behaviour first)
+Why: A full sweep is about 225 sequential runs. Parallel runs cut wall time; per-run wall-clock is unaffected.
+Done when:
+- [ ] Results are appended safely from several workers; `--max-total-usd` is still respected
+- [ ] Default stays 1
+
+### T-13: Container isolation for agent runs
+Status: Blocked
+Owns: ate/sandbox.py (new); DESIGN.md §2 isolation paragraph
+Blocked by: user (is Docker installed and OK to use?)
+Why: Worktrees outside the repo stop accidental leaks, not a determined search of the disk.
+Done when:
+- [ ] Opt-in `--sandbox docker` mounts only the worktree; leak check still runs
+
+### T-14: Subscription (non-bare) mode
+Status: Blocked
+Owns: ate/claude.py (non-bare branch only); DESIGN.md §2 bare paragraph
+Blocked by: T-1
+Why: Lets someone without an API key run it. Costs become estimates under plan limits.
+Done when:
+- [ ] `"bare": false` run verified once; user CLAUDE.md/plugins confirmed not loaded (e.g. `--safe-mode` plus `--agents`), or the limitation documented
+
+### T-15: Publish (user): GitHub repo, CI, README results
+Status: Blocked
+Owns: .github/workflows/check.yml (new); README.md results section
+Blocked by: user (create the public repo and push?) and a real sweep
+Done when:
+- [ ] CI runs `python scripts/check.py` (no API calls, no secrets)
+- [ ] README results come only from committed results/*.jsonl, sweep id cited
+
+## In progress
+
+## Review
+
+## Done
+
+### T-0: Design and scaffold
+Status: Done
+DESIGN.md, runner (`ate/`), configs A/B/C with roles, tasks t01-t02 with hidden tests and solutions,
+results schema, dry-run and oracle modes, scripts/check.py, Stop hook, this backlog.

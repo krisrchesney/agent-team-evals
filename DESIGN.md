@@ -283,6 +283,16 @@ claude.ai before and after each:
 | Pilot: 5 tasks × A,B,C × 3 | 45 | first real pass-rate table; usage windows needed for the full sweep |
 | Full: 25 tasks × A,B,C × 3 | 225 | the write-up; likely several windows, run while you are away |
 
+**First measurement** (smoke run, sweep `20261029T172613Z`, config A on t01, Sonnet 5.5): passed 11/11,
+44,017 tokens (4,472 cache-creation, 37,634 cache-read, 1,903 output, 8 fresh input), 7 turns, 17.6 s,
+about $0.04 API-equivalent. The shell tool was PowerShell, and the startup event listed no MCP servers, only
+the CLI's three built-in plugins, no account-synced plugins and no auto-memory. This is one run of the
+easiest task, so it fixes the order of magnitude and nothing more. The two rejected earlier attempts
+(connectors and synced plugins loaded) used 319,672 and 46,605 tokens, which shows how much of a run's usage
+isolation controls. On the plan's bars: the weekly bar moved about 1 point across the first two attempts
+(about 370k tokens) and the session bar moved 1 point for the first one. At 1-point resolution that is as
+precise as the bars get, so tokens, not bar percentages, are the unit to compare.
+
 Expectation to test, not a result: B uses roughly 1.5–2× A's tokens and C roughly 2.5–3.5×, because
 each added stage re-reads the repo. If the smoke run shows one run uses more than a few percent of a
 window, the pilot is split across more windows or trimmed (fewer reps first, never fewer configs).

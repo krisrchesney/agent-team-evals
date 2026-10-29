@@ -50,7 +50,7 @@ Done when:
 ## Blocked
 
 ### T-1: Smoke run (user): one task, config A, one rep, on the subscription
-Status: Blocked
+Status: Done (smoke + calibration)
 Owns: configs/defaults.json (`estimate_api_equiv_usd_per_stage` only); DESIGN.md §4 usage table
 Blocked by: user. (1) Turn off "extra usage" in claude.ai settings. (2) Sign in the clean profile once:
 `python -m ate auth` prints the command; it must then say OK. (3) Note the plan usage % right before,
@@ -73,13 +73,16 @@ account-synced plugins (cowork-plugin-management, data, databricks; 75 skills) w
 was live in the clean profile (a run could leave notes for the next). Fix: `--safe-mode` for subscription runs.
 Third attempt, sweep 20261029T172613Z (kept in results/): passed 11/11, 44,017 tokens, 7 turns, 17.6 s,
 `isolation_flags` and `leak_suspected` empty, apiKeySource none, PowerShell as the shell, no MCP, synced
-plugins or memory. First accepted record. Still open: whether `--safe-mode` keeps the `--agents` roles for
-B and C (the calibration run answers it).
+plugins or memory. First accepted record.
+Calibration, sweep 20261029T173012Z (t01+t02 x A,B,C, 1 rep): all six passed. `--safe-mode` hides `--agents`
+roles (B and C first failed with "agent not found" before any model call), so roles are now appended with
+`--append-system-prompt` from the same .claude/agents files; never-started stages are `harness_error`
+(retryable). Tokens per run: A 65,528, B 107,367 (1.64x), C 131,071 (2.00x); see DESIGN section 4.
 Done when:
 - [x] One real record in results/ with non-zero tokens, `auth: subscription`, empty `leak_suspected` and `isolation_flags`
 - [x] Usage recorded (DESIGN §4): tokens, turns, time, API-equivalent $; the plan bars are too coarse (1-point steps) to resolve one run
-- [ ] Then the calibration sweep (t01+t02 x A,B,C x 1 rep = 6 runs, user OK) confirms the reviewer returns a parsed verdict and the planner a plan
-- [ ] DESIGN §4 tables updated from measured numbers, with the sweep ids
+- [x] Then the calibration sweep (t01+t02 x A,B,C x 1 rep = 6 runs, user OK) confirms the reviewer returns a parsed verdict and the planner a plan
+- [x] DESIGN §4 tables updated from measured numbers, with the sweep ids
 
 ### T-8: Tasks t06-t15 (second batch)
 Status: Blocked

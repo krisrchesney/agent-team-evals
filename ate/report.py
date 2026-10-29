@@ -93,13 +93,15 @@ def render(records):
     for tid in sorted(grid):
         cells = [f"{sum(grid[tid][c])}/{len(grid[tid][c])}" if grid[tid][c] else "-" for c in cfgs]
         out.append(f"| {tid} | " + " | ".join(cells) + " |")
-    skipped = len(records) - len(counted(records))
+    done = {(r["task_id"], r["config_id"], r["rep"]) for r in counted(records)}
+    skipped = len({(r["task_id"], r["config_id"], r["rep"]) for r in records} - done)
     if skipped:
         out.append(f"\n{skipped} run(s) left out (rate_limited / auth_error / harness_error); re-run with --resume.")
     if any(r.get("auth") == "subscription" for r in records):
         out.append("\nRuns use the plan's usage. Tokens, turns and time are the usage metrics; the dollar column is Claude Code's API-equivalent estimate, for comparing configs, not a charge.")
-    problems = [r for r in records if r["status"] in RETRYABLE or r["leak_suspected"]
-                or r["read_only_violations"] or r.get("isolation_flags")]
+    problems = [r for r in records
+                if (r["status"] in RETRYABLE and (r["task_id"], r["config_id"], r["rep"]) not in done)
+                or r["leak_suspected"] or r["read_only_violations"] or r.get("isolation_flags")]
     if problems:
         out.append("\nFlags:")
         for r in problems:

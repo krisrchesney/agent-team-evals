@@ -50,6 +50,15 @@ def parse_agent_md(text):
     return meta
 
 
+def check_agent_models(agents, model):
+    """A role's `model:` frontmatter would override --model for that stage, quietly running one role
+    on a different (often pricier) model than the rest. Roles may omit it, say `inherit`, or match."""
+    for name, agent in agents.items():
+        if agent.get("model") not in (None, "inherit", model):
+            raise ValueError(f"agent {name!r} sets model {agent['model']!r}; the sweep model is {model!r}. "
+                             f"Remove the model line (or use --model {agent['model']} for the whole sweep).")
+
+
 def load_agents(agents_dir):
     """Return {name: {description, prompt, tools}} in the shape `claude --agents` expects."""
     if not agents_dir:

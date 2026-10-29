@@ -36,6 +36,14 @@ python -m ate run --tasks t01 --configs A --reps 1 --run-cap 0.5 --max-total-api
 `%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude\claude-code` (the real path in an ordinary
 PowerShell). `ate auth` prints the path it resolved.
 
+To run a whole sweep unattended, for example overnight, use the wrapper. It waits out a usage limit and
+resumes the same sweep, and stops on any other halt (leak or auth check, sweep cap):
+
+```bash
+powershell -File scripts\run_sweep.ps1 -DryRun                      # rehearsal, no plan usage
+powershell -File scripts\run_sweep.ps1 -Tasks "t01,t02,t03,t04,t05" -Reps 3   # the pilot
+```
+
 A run that hits your usage limit stops the sweep; continue it later with `--resume <sweep_id>`.
 
 Python 3.12, standard library only. Worktrees and transcripts go to `D:/ate-work`

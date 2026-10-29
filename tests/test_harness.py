@@ -160,6 +160,119 @@ class TestDryRunEndToEnd(unittest.TestCase):
         self.assertFalse(r["fix_round"])
 
 
+class TestSubscriptionSafety(unittest.TestCase):
+    """The "no extra $" guarantees for subscription mode."""
+
+    def test_child_env_strips_every_credential_and_parent_session_var(self):
+        defaults = {"auth": "subscription", "claude_config_dir": "D:/ate-work/claude-config"}
+        base = {"ANTHROPIC_API_KEY": "k", "ANTHROPIC_AUTH_TOKEN": "t", "ANTHROPIC_BASE_URL": "http://x",
+                "CLAUDE_CODE_OAUTH_TOKEN": "o", "CLAUDE_CODE_SIMPLE": "1", "CLAUDE_CODE_USE_BEDROCK": "1",
+                "AWS_BEARER_TOKEN_BEDROCK": "b", "CLAUDECODE": "1", "PATH": "/bin", "anthropic_api_key": "lower"}
+        env = claude.child_env(defaults, base=base)
+        self.assertEqual(env["PATH"], "/bin")
+        self.assertEqual(Path(env["CLAUDE_CONFIG_DIR"]), Path("D:/ate-work/claude-config"))
+        leftover = {k for k in env if k not in ("PATH", "CLAUDE_CONFIG_DIR")}
+        self.assertEqual(leftover, set())
+
+    def test_defaults_use_subscription(self):
+        d = config.load_defaults()
+        self.assertEqual(d["auth"], "subscription")
+        self.assertTrue(d["claude_config_dir"])
+
+    def test_subscription_stage_has_no_bare_flag(self):
+        spec = claude.StageSpec(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet",
+                                max_turns=5, budget_usd=1.0, timeout_s=10, permission_mode="acceptEdits",
+                                tools="Read", allowed_tools=["Read"], bare=False)
+        self.assertNotIn("--bare", claude.build_command("claude", spec))
+
+    def _log(self, tmp, events):
+        log = Path(tmp) / "s.jsonl"
+        log.write_text("\n".join(json.dumps(e) for e in events) + "\n")
+        return log
+
+    def test_scan_log_detects_rate_limit_and_key_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = self._log(tmp, [
+                {"type": "system", "subtype": "init", "apiKeySource": "none"},
+                {"type": "system", "subtype": "api_retry", "error": "rate_limit", "attempt": 1},
+                {"type": "result", "subtype": "error_during_execution", "is_error": True,
+                 "result": "Claude usage limit reached. Your limit will reset at 5pm"}])
+            scan = claude.scan_log(log)
+        self.assertTrue(scan["rate_limited"])
+        self.assertEqual(scan["api_key_source"], "none")
+
+    def test_normal_reply_is_not_a_rate_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = self._log(tmp, [{"type": "result", "subtype": "success", "is_error": False,
+                                   "result": "Added a rate limit test."}])
+            self.assertFalse(claude.scan_log(log)["rate_limited"])
+
+    def _run_with(self, events_fn):
+        defaults = config.load_defaults()
+        task = tasks.load_task(tasks.list_tasks()[0])
+        with tempfile.TemporaryDirectory() as tmp:
+            # A non-None `fake` normally disables the auth check, so mimic a real run's log instead.
+            def fake(spec):
+                return events_fn(spec)
+            rec = pipeline.run_one(task, config.load_config("B"), 1, defaults=defaults, sweep_id="t",
+                                   work_root=Path(tmp), results_path=Path(tmp) / "r.jsonl", binary=None,
+                                   claude_version="x", harness_sha=None, fake=fake)
+        return rec
+
+    def test_rate_limit_stops_run_and_is_retryable(self):
+        rec = self._run_with(lambda spec: [
+            {"type": "system", "subtype": "init", "apiKeySource": "none"},
+            {"type": "result", "subtype": "error_during_execution", "is_error": True,
+             "result": "You've hit your usage limit", "total_cost_usd": 0.01, "usage": {}}])
+        self.assertEqual(rec["status"], "rate_limited")
+        self.assertEqual(len(rec["stages"]), 1)
+        self.assertIn("rate_limited", pipeline.RETRYABLE)
+
+    def test_personal_claude_md_canary(self):
+        rec = self._run_with(lambda spec: [
+            {"type": "system", "subtype": "init", "apiKeySource": "none", "plugins": [{"name": "data"}]},
+            {"type": "result", "subtype": "success", "is_error": False, "num_turns": 1,
+             "result": "2026-10-29 09:00 CST\nDone.", "total_cost_usd": 0.0, "usage": {}}])
+        self.assertTrue(any("CLAUDE.md" in f for f in rec["isolation_flags"]))
+        self.assertTrue(any("plugins" in f for f in rec["isolation_flags"]))
+
+    def test_paid_run_refuses_without_signed_in_profile(self):
+        from ate.__main__ import main
+        with tempfile.TemporaryDirectory() as tmp:
+            # An empty config dir is never signed in, so the run must refuse before any stage starts.
+            import ate.config as cfgmod
+            orig = cfgmod.load_defaults
+            cfgmod.load_defaults = lambda path=None: dict(orig(path), claude_config_dir=str(Path(tmp) / "empty"))
+            try:
+                code = main(["run", "--tasks", "t01", "--configs", "A", "--reps", "1",
+                             "--max-total-usd", "0.5", "--yes", "--results-dir", tmp,
+                             "--work-root", str(Path(tmp) / "w")])
+            finally:
+                cfgmod.load_defaults = orig
+            self.assertEqual(code, 2)
+            self.assertEqual(list(Path(tmp).glob("*.jsonl")), [])
+
+
+class TestResume(unittest.TestCase):
+    def test_resume_reruns_only_retryable(self):
+        from ate.__main__ import main
+        with tempfile.TemporaryDirectory() as tmp:
+            args = ["run", "--dry-run", "--oracle", "--tasks", "t01", "--configs", "A,B", "--reps", "1",
+                    "--results-dir", tmp, "--work-root", str(Path(tmp) / "w")]
+            self.assertEqual(main(args), 0)
+            path = next(Path(tmp).glob("*.jsonl"))
+            recs = results.read([path])
+            recs[1]["status"] = "rate_limited"  # pretend B hit the limit
+            path.write_text("".join(json.dumps(r) + "\n" for r in recs))
+            self.assertEqual(main(args + ["--resume", path.stem]), 0)
+            after = results.read([path])
+        self.assertEqual(len(after), 3)
+        self.assertEqual(after[-1]["config_id"], recs[1]["config_id"])
+        self.assertEqual(after[-1]["attempt"], 2)
+        self.assertEqual(after[-1]["status"], "passed")
+        self.assertEqual(len(report.counted(after)), 2)
+
+
 class TestReport(unittest.TestCase):
     def test_wilson(self):
         lo, hi = report.wilson(0, 3)

@@ -5,7 +5,8 @@ from pathlib import Path
 from . import REPO_ROOT, SCHEMA_VERSION
 
 SCHEMA_PATH = REPO_ROOT / "docs" / "results.schema.json"
-STATUSES = ("passed", "failed", "budget_exceeded", "timeout", "agent_error", "harness_error")
+STATUSES = ("passed", "failed", "budget_exceeded", "timeout", "agent_error", "rate_limited", "auth_error",
+            "harness_error")
 
 # Minimal stdlib validation: required keys and their JSON types. The full JSON Schema
 # (docs/results.schema.json) documents the same contract for other tools.

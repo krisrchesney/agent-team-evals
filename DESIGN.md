@@ -78,11 +78,13 @@ claude -p                                   # print mode: run the prompt, exit (
   --permission-prompts none                 # nobody is there to approve, so deny (don't hang)
   --tools Bash,Read,Edit,Write,Glob,Grep    # which tools exist (read-only stages drop Edit/Write)
   --allowedTools "Read,Edit,...,Bash(python -m unittest *),Bash(git diff *)"   # which run without asking
-  --no-session-persistence                  # don't write transcripts into ~/.claude (C: is nearly full)
-  --bare                                    # ignore ~/.claude hooks, plugins, memory and CLAUDE.md
+  --no-session-persistence                  # don't save the session to disk
   --agents <run>/agents.json --agent reviewer   # B and C: which role this stage plays
   --json-schema '<schema>'                  # reviewer and planner: structured output
 ```
+
+run with a scrubbed environment: every `ANTHROPIC_*` / `CLAUDE*` variable removed, then
+`CLAUDE_CONFIG_DIR=D:/ate-work/claude-config` (a clean, subscription-only profile).
 
 **Why stream-json and not plain json?** `--output-format json` prints only the final result object
 (`total_cost_usd`, `usage`, `modelUsage`, `num_turns`, `duration_ms`, `subtype`, `result`,
@@ -90,13 +92,37 @@ claude -p                                   # print mode: run the prompt, exit (
 whole transcript. We save it per stage, so when C loses to A on a task you can read why. The
 harness reads only the last `type: "result"` line for the numbers.
 
-**Why `--bare`?** Without it, `claude -p` loads your personal `~/.claude` setup: your CLAUDE.md
-(which tells Claude to print the CST time first), your plugins, hooks and memory. That would
-contaminate the benchmark and make it unreproducible on another machine. Bare mode loads none of it.
-Roles are passed explicitly with `--agents`. The catch is that **bare mode only accepts
-`ANTHROPIC_API_KEY`**, not a subscription login. That suits a benchmark anyway: costs are real API
-dollars, not estimates hidden inside a plan's rate limits. A `"bare": false` switch exists in
-`configs/defaults.json` for subscription use, but it is untested (ticket T-11).
+**Auth: your Claude subscription, with no extra spend.** `"auth": "subscription"` in
+`configs/defaults.json` (the default). Runs count against your Pro/Max plan's usage limits, and
+nothing is billed per token. Getting there needed three safeguards:
+
+1. **A clean profile.** Without isolation, `claude -p` loads your personal `~/.claude` setup: your
+   CLAUDE.md (which tells Claude to print the CST time first), plugins, hooks and memory. That
+   would contaminate the benchmark. `CLAUDE_CONFIG_DIR` points each run at its own config folder,
+   which holds only a login you create once (`python -m ate auth` prints the command). Per the
+   Claude Code docs, settings, plugins, history and `.credentials.json` all live under that folder.
+2. **No API key can sneak in.** In `-p` mode Claude Code prefers `ANTHROPIC_AUTH_TOKEN`, then
+   `ANTHROPIC_API_KEY`, over a subscription login. So the harness strips every `ANTHROPIC_*` and
+   `CLAUDE*` variable from the run's environment. That also drops what a parent Claude session
+   exports: this desktop app sets `CLAUDE_CODE_SIMPLE` (which forces bare mode) and
+   `ANTHROPIC_BASE_URL`.
+3. **Checked before and during the run.** Before a sweep, `claude auth status` on the clean
+   profile must report a subscription login, or the runner refuses to start. During a sweep, a
+   stage that reports any API-key source stops the sweep with status `auth_error`. A reply that
+   starts with your CST-timestamp rule, or a startup event listing plugins or MCP servers, stops
+   it too (`isolation_flags`).
+
+**The one setting the harness can't see: extra usage.** Pro/Max plans can let you keep working past
+your limits at API rates. Turn it off in claude.ai settings before any sweep. Then a limit just
+stops the run, and the harness records `rate_limited` and halts the sweep. `ate run --resume
+<sweep>` continues it in the next usage window. Rate-limited runs are re-run, never counted as fails.
+
+**What `cost_usd` means on a subscription.** Claude Code still reports `total_cost_usd`: what the
+run would have cost at API prices. Nobody is billed that amount, but it is the right yardstick for
+comparing configs ("C used 2.8× A's API-equivalent cost") and for sizing a usage window.
+`--max-budget-usd` and `--max-total-usd` work on the same estimate, so they throttle plan usage.
+
+`"auth": "api_key"` is still available: it adds `--bare` and uses `ANTHROPIC_API_KEY`, billed per token.
 
 **Why the prompt goes on stdin.** `--allowedTools` and `--tools` take a variable number of values
 and can swallow a positional prompt placed after them. Stdin avoids that.
@@ -224,7 +250,7 @@ Three layers, all in place now:
 2. **Per-sweep cap.** `--max-total-usd` is **required** for any non-dry run. The runner stops starting
    new runs once cumulative spend reaches it. A run already in progress can overshoot by at most one
    run budget.
-3. **Explicit go.** A paid run prints its plan and an estimate, and refuses to start without `--yes`.
+3. **Explicit go.** A real run checks the subscription login, prints its plan and an estimate, and refuses to start without `--yes`. It also halts at the first usage-limit hit (`rate_limited`) and can be continued with `--resume`.
 
 Plus two **dry-run modes**, which never call the API:
 
@@ -262,7 +288,7 @@ task takes a builder about 10–20 turns, and most input is cache reads of a ~20
 | Full: 25 tasks × 3 configs × 3 reps | 225 | ~$105 (range $60–200) |
 | Full on Opus 5.5 ($4/$20) | 225 | roughly 2× that |
 
-The estimate `ate run` prints before a paid sweep is cruder and deliberately high: it assumes
+The estimate `ate run` prints before a real sweep is cruder and deliberately high: it assumes
 $0.20 per stage, that C always plans 3 subtasks, and that every fix round runs (about $2.00 per
 task-rep instead of $1.40). T-1 replaces the $0.20 with a measured number.
 The worst case if every run hits its $2 cap is $450 for the full sweep. That is why

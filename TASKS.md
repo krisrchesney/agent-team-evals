@@ -84,10 +84,24 @@ Done when:
 - [x] Then the calibration sweep (t01+t02 x A,B,C x 1 rep = 6 runs, user OK) confirms the reviewer returns a parsed verdict and the planner a plan
 - [x] DESIGN §4 tables updated from measured numbers, with the sweep ids
 
+### T-16: Pilot sweep (user): 5 tasks x A,B,C x 3 reps = 45 runs
+Status: Blocked
+Owns: results/<sweep>.jsonl (new); README.md results section; DESIGN.md section 4 pilot numbers
+Blocked by: user. Needs the user's go and a time window when they are not using Claude heavily.
+Why: First real pass-rate table, and the usage data that decides whether the full sweep fits.
+Command: `powershell -File scripts\run_sweep.ps1 -Tasks "t01,t02,t03,t04,t05" -Reps 3`
+(run cap 1.5 and sweep cap 15 API-equivalent dollars: runaway guards, about 3x the expected total, and a
+run cap high enough that a long multi-file run is not cut off and counted as a failure).
+Audit before running (done 2026-10-29): every hidden test in t03-t05 traces to a numbered requirement.
+Done when:
+- [ ] 45 countable records, no `harness_error`/`rate_limited` left, `isolation_flags` and `leak_suspected` empty
+- [ ] `python -m ate report` table committed to README with the sweep id; usage per config in DESIGN section 4
+- [ ] Caveats written: 5 tasks, 3 reps, one model, wide intervals
+
 ### T-8: Tasks t06-t15 (second batch)
 Status: Blocked
 Owns: tasks/t06-*/ ... tasks/t15-*/ (split into 2-3 tickets by the planner when unblocked)
-Blocked by: T-1 (calibrate difficulty: if A passes everything, the tasks are too easy to separate configs)
+Blocked by: T-16 (calibrate difficulty: if A passes everything, the tasks are too easy to separate configs)
 Why: 5 tasks can't separate configs. DESIGN §3 needs 20-30.
 Done when:
 - [ ] Mix per DESIGN §1 categories; each passes `validate`

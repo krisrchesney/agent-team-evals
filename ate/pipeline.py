@@ -79,19 +79,19 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
     wt_path = run_dir / "wt"
     subscription = defaults.get("auth", "subscription") == "subscription"
     env = claude.child_env(defaults) if fake is None else None
-    budget = float(defaults["run_budget_usd"])
+    budget = float(defaults["run_cap_api_equiv_usd"])
     rec = {
         "schema_version": SCHEMA_VERSION, "run_id": run_id, "sweep_id": sweep_id,
         "started_utc": started.isoformat(timespec="seconds"), "task_id": task.id,
         "config_id": cfg["id"], "rep": rep, "model": defaults["model"], "dry_run": fake is not None,
         "status": "harness_error", "passed": False,
         "tests": {"total": 0, "passed": 0, "failed": 0, "errors": 0},
-        "cost_usd": 0.0, "tokens": {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0},
+        "api_equiv_usd": 0.0, "tokens": {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0},
         "agent_wall_s": 0.0, "num_turns": 0, "stages": [], "review_verdict": None,
         "fix_round": False, "plan_subtasks": None,
         "diff": {"files": 0, "insertions": 0, "deletions": 0}, "touched_tests": False,
         "read_only_violations": [], "leak_suspected": [], "claude_version": claude_version,
-        "harness_sha": harness_sha, "budget_usd": budget, "worktree": str(wt_path), "error": None,
+        "harness_sha": harness_sha, "cap_api_equiv_usd": budget, "worktree": str(wt_path), "error": None,
         "auth": defaults.get("auth", "subscription"), "attempt": attempt, "isolation_flags": [],
     }
     seed = None
@@ -110,9 +110,9 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
         outputs, last_summary, stopped = {}, "", None
         leak_needles = ["hidden_tests", "_ate_hidden", "agent-team-evals"]
         for st, extra in _expand_stages(cfg, outputs):
-            remaining = budget - rec["cost_usd"]
+            remaining = budget - rec["api_equiv_usd"]
             if remaining < MIN_STAGE_BUDGET:
-                stopped = "budget_exceeded"
+                stopped = "cap_exceeded"
                 break
             read_only = st.get("mode") == "read"
             prompt = _render(st["prompt"], task_prompt=task.prompt, builder_summary=last_summary or "(none)",
@@ -120,7 +120,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
             spec = claude.StageSpec(
                 name=st["name"], prompt=prompt, cwd=wt_path, log_path=run_dir / f"{st['name']}.jsonl",
                 model=defaults["model"], max_turns=int(defaults["stage_max_turns"]),
-                budget_usd=remaining, timeout_s=int(defaults["stage_timeout_s"]),
+                cap_api_equiv_usd=remaining, timeout_s=int(defaults["stage_timeout_s"]),
                 permission_mode=defaults["permission_mode"],
                 tools=defaults["tools_read" if read_only else "tools_write"],
                 allowed_tools=defaults["allowed_tools_read" if read_only else "allowed_tools_write"],
@@ -135,7 +135,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
                 workspace.restore_tree(wt_path, before)
 
             rec["stages"].append(res.as_record())
-            rec["cost_usd"] = round(rec["cost_usd"] + res.cost_usd, 6)
+            rec["api_equiv_usd"] = round(rec["api_equiv_usd"] + res.api_equiv_usd, 6)
             for k in rec["tokens"]:
                 rec["tokens"][k] += res.tokens.get(k, 0)
             rec["num_turns"] += res.num_turns
@@ -172,7 +172,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
                 stopped = "timeout"
                 break
             if res.subtype and "budget" in res.subtype:
-                stopped = "budget_exceeded"
+                stopped = "cap_exceeded"
                 break
             # A failed write stage or planner ends the run. A failed reviewer does not: there is
             # simply no verdict, so the fix round is skipped and we grade what the builder made.

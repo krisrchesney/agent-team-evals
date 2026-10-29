@@ -70,7 +70,7 @@ class TestStreamParsing(unittest.TestCase):
             ]))
             res = claude.StageResult(name="review", agent="reviewer", exit_code=0)
             claude.apply_result_event(res, claude.read_result_event(log))
-        self.assertAlmostEqual(res.cost_usd, 0.1234)
+        self.assertAlmostEqual(res.api_equiv_usd, 0.1234)
         self.assertEqual(res.tokens, {"input": 10, "output": 20, "cache_read": 300, "cache_creation": 40})
         self.assertEqual(res.structured["verdict"], "APPROVE")
         self.assertFalse(res.is_error)
@@ -82,7 +82,7 @@ class TestStreamParsing(unittest.TestCase):
 
     def test_prompt_not_in_argv(self):
         spec = claude.StageSpec(name="s", prompt="SECRET PROMPT", cwd=Path("."), log_path=Path("x"),
-                                model="sonnet", max_turns=5, budget_usd=1.0, timeout_s=10,
+                                model="sonnet", max_turns=5, cap_api_equiv_usd=1.0, timeout_s=10,
                                 permission_mode="acceptEdits", tools="Read", allowed_tools=["Read"])
         cmd = claude.build_command("claude", spec)
         self.assertNotIn("SECRET PROMPT", cmd)
@@ -146,7 +146,7 @@ class TestDryRunEndToEnd(unittest.TestCase):
     def test_snapshot_fails(self):
         for r in self._run(oracle=False):
             self.assertEqual(r["status"], "failed", r["error"])
-            self.assertEqual(r["cost_usd"], 0.0)
+            self.assertEqual(r["api_equiv_usd"], 0.0)
 
     def test_oracle_passes_and_pipeline_shape(self):
         recs = {r["config_id"]: r for r in self._run(oracle=True)}
@@ -192,7 +192,7 @@ class TestSubscriptionSafety(unittest.TestCase):
 
     def test_subscription_stage_has_no_bare_flag(self):
         spec = claude.StageSpec(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet",
-                                max_turns=5, budget_usd=1.0, timeout_s=10, permission_mode="acceptEdits",
+                                max_turns=5, cap_api_equiv_usd=1.0, timeout_s=10, permission_mode="acceptEdits",
                                 tools="Read", allowed_tools=["Read"], bare=False)
         self.assertNotIn("--bare", claude.build_command("claude", spec))
 
@@ -256,7 +256,7 @@ class TestSubscriptionSafety(unittest.TestCase):
             cfgmod.load_defaults = lambda path=None: dict(orig(path), claude_config_dir=str(Path(tmp) / "empty"))
             try:
                 code = main(["run", "--tasks", "t01", "--configs", "A", "--reps", "1",
-                             "--max-total-usd", "0.5", "--yes", "--results-dir", tmp,
+                             "--max-total-api-equiv", "0.5", "--yes", "--results-dir", tmp,
                              "--work-root", str(Path(tmp) / "w")])
             finally:
                 cfgmod.load_defaults = orig
@@ -292,6 +292,21 @@ class TestReport(unittest.TestCase):
         lo, hi = report.wilson(10, 10)
         self.assertLess(lo, 1.0)
         self.assertEqual(hi, 1.0)
+
+    def test_report_leads_with_usage_and_labels_dollars(self):
+        rec = {"config_id": "A", "task_id": "t", "status": "passed", "passed": True, "dry_run": False,
+               "tests": {"total": 2, "passed": 2, "failed": 0, "errors": 0},
+               "tokens": {"input": 100, "output": 50, "cache_read": 1000, "cache_creation": 10},
+               "num_turns": 7, "agent_wall_s": 12.0, "api_equiv_usd": 0.31, "fix_round": False,
+               "leak_suspected": [], "read_only_violations": [], "run_id": "x", "error": None, "auth": "subscription"}
+        row = report.summarise([rec])[0]
+        self.assertEqual(row["mean_tokens"], 1160)
+        self.assertEqual(row["tokens_per_pass"], 1160)
+        self.assertEqual(row["mean_turns"], 7)
+        text = report.render([rec])
+        self.assertIn("tokens / pass", text)
+        self.assertIn("not a charge", text)
+        self.assertNotIn("cost", text.lower())
 
     def test_schema_rejects_bad_record(self):
         self.assertTrue(results.validate({"schema_version": 1}))

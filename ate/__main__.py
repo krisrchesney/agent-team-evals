@@ -2,9 +2,9 @@
 
   python -m ate list                         tasks and configs
   python -m ate validate [--tasks t01]       each task: snapshot fails hidden tests, solution passes
-  python -m ate run --dry-run                whole pipeline, no API calls, zero cost
+  python -m ate run --dry-run                whole pipeline, no API calls, no plan usage
   python -m ate auth                         is the clean subscription profile signed in?
-  python -m ate run --tasks t01 --configs A --reps 1 --max-total-usd 0.5 --yes    real run
+  python -m ate run --tasks t01 --configs A --reps 1 --max-total-api-equiv 0.5 --yes   real run (uses plan usage)
   python -m ate run --resume <sweep_id> ...  continue after a usage-limit stop (same flags)
   python -m ate report results/<sweep>.jsonl
 """
@@ -59,7 +59,7 @@ def cmd_validate(args):
 
 def _estimate(task_ids, config_ids, reps, defaults):
     """Rough pre-run estimate: stage count x a per-stage guess from configs/defaults.json."""
-    per_stage = float(defaults["estimate_usd_per_stage"])
+    per_stage = float(defaults["estimate_api_equiv_usd_per_stage"])
     total = 0.0
     for cid in config_ids:
         cfg = config.load_config(cid)
@@ -67,7 +67,7 @@ def _estimate(task_ids, config_ids, reps, defaults):
         for st in cfg["stages"]:
             stages += cfg.get("max_subtasks", 3) if "foreach" in st else 1
         total += stages * per_stage * len(task_ids) * reps
-    cap = float(defaults["run_budget_usd"]) * len(task_ids) * len(config_ids) * reps
+    cap = float(defaults["run_cap_api_equiv_usd"]) * len(task_ids) * len(config_ids) * reps
     return round(total, 2), round(cap, 2)
 
 
@@ -75,8 +75,8 @@ def cmd_run(args):
     defaults = config.load_defaults()
     if args.model:
         defaults["model"] = args.model
-    if args.run_budget is not None:
-        defaults["run_budget_usd"] = args.run_budget
+    if args.run_cap is not None:
+        defaults["run_cap_api_equiv_usd"] = args.run_cap
     work_root = Path(args.work_root or defaults["work_root"])
     task_ids = tasks.resolve(args.tasks)
     config_ids = args.configs.split(",") if args.configs != "all" else config.list_configs()
@@ -88,11 +88,15 @@ def cmd_run(args):
     print(f"plan: {len(task_ids)} tasks x {len(config_ids)} configs x {args.reps} reps = {n_runs} runs, "
           f"model={defaults['model']}, auth={defaults.get('auth', 'subscription')}")
     if args.dry_run:
-        print("mode: DRY RUN (fake CLI, no API calls, $0.00)" + (" + oracle solutions" if args.oracle else ""))
+        print("mode: DRY RUN (fake CLI, no plan usage)" + (" + oracle solutions" if args.oracle else ""))
     else:
-        kind = "API-equivalent (uses plan usage, billed $0)" if subscription else "billed to the API key"
-        print(f"estimate: ~${est:.2f} {kind} (worst case if every run hits its "
-              f"${defaults['run_budget_usd']:.2f} cap: ${cap:.2f})")
+        if subscription:
+            print(f"usage estimate: {n_runs} runs, roughly ${est:.2f} API-equivalent "
+                  f"(a yardstick, not a charge; nothing is billed). Runaway-loop cap: "
+                  f"${defaults['run_cap_api_equiv_usd']:.2f} API-equivalent per run, ${cap:.2f} if every run hit it.")
+            print("note your claude.ai usage bar before and after, and keep 'extra usage' off.")
+        else:
+            print(f"estimate: ~${est:.2f}, billed to the API key (cap ${defaults['run_cap_api_equiv_usd']:.2f}/run)")
         if not binary:
             print("claude CLI not found; set CLAUDE_BIN")
             return 2
@@ -102,8 +106,8 @@ def cmd_run(args):
             print("refusing to start. Sign the clean profile in once, in PowerShell:\n  "
                   + claude.login_command(binary, defaults))
             return 2
-        if args.max_total_usd is None:
-            print("refusing to start: pass --max-total-usd (on a subscription it caps API-equivalent usage)")
+        if args.max_total_api_equiv is None:
+            print("refusing to start: pass --max-total-api-equiv, a sweep-wide runaway-loop cap in API-equivalent units")
             return 2
         if not args.yes:
             print("refusing to start: re-run with --yes after reading the estimate above")
@@ -134,7 +138,7 @@ def cmd_run(args):
 
     version = "dry-run" if args.dry_run else claude.claude_version(binary)
     sha = _harness_sha()
-    spent = sum(r["cost_usd"] for r in previous)  # the cap covers the whole sweep, resumed or not
+    spent = sum(r["api_equiv_usd"] for r in previous)  # the cap covers the whole sweep, resumed or not
     halt = None
     # Interleave configs within each task+rep so time-of-day effects hit every config equally.
     for rep in range(1, args.reps + 1):
@@ -144,8 +148,8 @@ def cmd_run(args):
                 key = (tid, cid, rep)
                 if halt or key in done:
                     continue
-                if args.max_total_usd is not None and spent >= args.max_total_usd:
-                    halt = f"spent ${spent:.2f} >= --max-total-usd {args.max_total_usd}"
+                if args.max_total_api_equiv is not None and spent >= args.max_total_api_equiv:
+                    halt = f"sweep reached its cap of {args.max_total_api_equiv} API-equivalent (used {spent:.2f})"
                     continue
                 cfg = config.load_config(cid)
                 rec = pipeline.run_one(task, cfg, rep, defaults=defaults, sweep_id=sweep_id,
@@ -154,10 +158,11 @@ def cmd_run(args):
                                        fake=(pipeline.make_fake(task if args.oracle else None)
                                              if args.dry_run else None),
                                        keep_worktree=not args.cleanup, attempt=attempts.get(key, 0) + 1)
-                spent += rec["cost_usd"]
+                spent += rec["api_equiv_usd"]
                 stages = "+".join(s["name"] for s in rec["stages"])
                 print(f"  {tid} {cid} r{rep}: {rec['status']:<15} tests {rec['tests']['passed']}/"
-                      f"{rec['tests']['total']}  ${rec['cost_usd']:.3f}  {rec['agent_wall_s']:.1f}s  [{stages}]"
+                      f"{rec['tests']['total']}  {sum(rec['tokens'].values()):,} tok  {rec['num_turns']} turns  "
+                      f"{rec['agent_wall_s']:.1f}s  (~${rec['api_equiv_usd']:.2f} API-equiv)  [{stages}]"
                       + (f"  ERROR {rec['error']}" if rec["error"] else "")
                       + (f"  ISOLATION {rec['isolation_flags']}" if rec.get("isolation_flags") else ""))
                 if rec["status"] == "rate_limited":
@@ -169,7 +174,9 @@ def cmd_run(args):
     if halt:
         print(f"stopped: {halt}. Continue later with the same flags plus: --resume {sweep_id}")
     print(f"results: {results_path}")
-    print(f"total {'API-equivalent ' if subscription else ''}spend: ${spent:.3f}")
+    total_tok = sum(sum(r["tokens"].values()) for r in results.read([results_path])) if results_path.exists() else 0
+    print(f"sweep usage: {total_tok:,} tokens, ~${spent:.2f} API-equivalent"
+          + (" (not a charge)" if subscription else " (billed)"))
     return 3 if halt else 0
 
 
@@ -211,11 +218,11 @@ def main(argv=None):
     r.add_argument("--tasks", default="all", help="'all' or comma list of ids/prefixes")
     r.add_argument("--configs", default="all", help="'all' or e.g. A,B")
     r.add_argument("--reps", type=int, default=3)
-    r.add_argument("--dry-run", action="store_true", help="fake CLI: no API calls, $0")
+    r.add_argument("--dry-run", action="store_true", help="fake CLI: no API calls, no plan usage")
     r.add_argument("--oracle", action="store_true",
                    help="with --dry-run: fake builders copy in the reference solution (tests the pass path)")
-    r.add_argument("--max-total-usd", type=float, help="stop launching runs once spend reaches this (required for paid runs)")
-    r.add_argument("--run-budget", type=float, help="override per-run cap (USD)")
+    r.add_argument("--max-total-api-equiv", type=float, help="runaway-loop cap for the whole sweep, in API-equivalent dollars (required for real runs)")
+    r.add_argument("--run-cap", type=float, help="override the per-run runaway-loop cap (API-equivalent dollars)")
     r.add_argument("--model", help="override configs/defaults.json model")
     r.add_argument("--work-root", help="where seeds/worktrees/logs go (default from defaults.json)")
     r.add_argument("--results-dir", help="default: results/")

@@ -150,6 +150,7 @@ class StageSpec:
     tools: str
     allowed_tools: list
     bare: bool = True
+    safe_mode: bool = False
     effort: str = None
     agent: str = None
     agents_file: Path = None
@@ -201,6 +202,10 @@ def build_command(binary, spec):
            "--allowedTools", ",".join(spec.allowed_tools)]
     if spec.bare:
         cmd.append("--bare")
+    if spec.safe_mode:
+        # Subscription runs: no plugins/skills synced from the claude.ai account, no hooks, no MCP,
+        # no auto-memory (which could carry notes from one run into the next). Built-in tools stay.
+        cmd.append("--safe-mode")
     if spec.effort:
         cmd += ["--effort", spec.effort]
     if spec.agents_file:

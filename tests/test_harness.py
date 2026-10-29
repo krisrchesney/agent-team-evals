@@ -246,6 +246,13 @@ class TestSubscriptionSafety(unittest.TestCase):
         self.assertIn("PowerShell", d["tools_write"])
         self.assertIn("Bash", d["tools_write"])
 
+    def test_subscription_runs_use_safe_mode(self):
+        base = dict(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet", max_turns=5,
+                    cap_api_equiv_usd=1.0, timeout_s=10, permission_mode="acceptEdits", tools="Read",
+                    allowed_tools=["Read"])
+        self.assertIn("--safe-mode", claude.build_command("claude", claude.StageSpec(**base, bare=False, safe_mode=True)))
+        self.assertNotIn("--safe-mode", claude.build_command("claude", claude.StageSpec(**base)))
+
     def test_strict_mcp_flag_always_present(self):
         spec = claude.StageSpec(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet",
                                 max_turns=5, cap_api_equiv_usd=1.0, timeout_s=10, permission_mode="acceptEdits",

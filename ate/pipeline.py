@@ -124,7 +124,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
                 permission_mode=defaults["permission_mode"],
                 tools=defaults["tools_read" if read_only else "tools_write"],
                 allowed_tools=defaults["allowed_tools_read" if read_only else "allowed_tools_write"],
-                bare=not subscription, effort=defaults.get("effort"), env=env,
+                bare=not subscription, safe_mode=subscription, effort=defaults.get("effort"), env=env,
                 agent=st.get("agent"), agents_file=agents_file if st.get("agent") else None,
                 json_schema=config.load_schema(st["schema"]) if st.get("schema") else None,
             )

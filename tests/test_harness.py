@@ -264,6 +264,36 @@ class TestSubscriptionSafety(unittest.TestCase):
             self.assertEqual(list(Path(tmp).glob("*.jsonl")), [])
 
 
+class TestFindClaude(unittest.TestCase):
+    def _exe(self, root, version, h):
+        d = Path(root) / version / h
+        d.mkdir(parents=True)
+        (d / "claude.exe").write_text("")
+        return str(d / "claude.exe")
+
+    def test_prefers_real_package_path_and_newest_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            local, roaming = Path(tmp) / "Local", Path(tmp) / "Roaming"
+            pkg = local / "Packages" / "Claude_abc123" / "LocalCache" / "Roaming" / "Claude" / "claude-code"
+            old = self._exe(pkg, "2.1.295", "aaa")
+            new = self._exe(pkg, "2.1.299", "bbb")
+            self._exe(roaming / "Claude" / "claude-code", "2.1.299", "ccc")
+            env = {"LOCALAPPDATA": str(local), "APPDATA": str(roaming)}
+            hits = claude.bundled_candidates(env)
+            best = max(hits, key=lambda h: (claude._version_key(h[0]), -h[2]))[1]
+            self.assertEqual(best, new)  # newest version, and the package path beats the APPDATA redirect
+            self.assertNotEqual(best, old)
+
+    def test_versions_compare_numerically(self):
+        self.assertGreater(claude._version_key("2.1.299"), claude._version_key("2.1.30"))
+
+    def test_appdata_only_still_works(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            exe = self._exe(Path(tmp) / "Claude" / "claude-code", "2.1.299", "x")
+            hits = claude.bundled_candidates({"APPDATA": tmp})
+            self.assertEqual([h[1] for h in hits], [exe])
+
+
 class TestResume(unittest.TestCase):
     def test_resume_reruns_only_retryable(self):
         from ate.__main__ import main

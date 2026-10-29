@@ -101,6 +101,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
         workspace.add_worktree(seed, seed_sha, wt_path, branch)
 
         agents = config.load_agents(cfg.get("agents_dir"))
+        config.check_agent_models(agents, defaults["model"])
         agents_file = None
         if agents:
             agents_file = run_dir / "agents.json"

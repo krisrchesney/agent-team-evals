@@ -10,7 +10,7 @@ pass rate on hidden tests, dollars and tokens, and wall-clock time.
 | B | builder + read-only reviewer, one round of fixes |
 | C | planner → builder(s) → reviewer → one fix round |
 
-**Status:** scaffolded and running end to end in dry-run mode. No paid benchmark has run yet, so
+**Status:** scaffolded and running end to end in dry-run mode. No real benchmark has run yet, so
 there are no results. See [DESIGN.md](DESIGN.md) for how and why, and [TASKS.md](TASKS.md) for what's next.
 
 ## Try it (free, no API calls)
@@ -24,11 +24,15 @@ python -m ate report results/<sweep>.jsonl
 python scripts/check.py                  # everything above as one health check
 ```
 
-A paid run needs an `ANTHROPIC_API_KEY`, a spend cap and explicit confirmation:
+Real runs use your Claude Pro/Max subscription (plan usage, no per-token billing) through a clean
+profile that holds only a login. Turn off "extra usage" in claude.ai settings first, then:
 
 ```bash
+python -m ate auth                       # signed in? if not, prints the one-time login command
 python -m ate run --tasks t01 --configs A --reps 1 --run-budget 0.5 --max-total-usd 0.5 --yes
 ```
+
+A run that hits your usage limit stops the sweep; continue it later with `--resume <sweep_id>`.
 
 Python 3.12, standard library only. Worktrees and transcripts go to `D:/ate-work`
 (`work_root` in configs/defaults.json).

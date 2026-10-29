@@ -7,6 +7,7 @@ useful for "why did this run fail?"), and the last event, `type: "result"`, is t
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -26,6 +27,71 @@ def find_claude():
     if hits:
         return max(hits, key=lambda p: _version_key(Path(p).parent.parent.name))
     return None
+
+
+# --- auth -------------------------------------------------------------------------------------
+# "subscription" (default): your Claude Pro/Max login, held in a separate config folder that has
+# nothing else in it (no CLAUDE.md, plugins, hooks or memory), so your personal setup can't leak
+# into the benchmark and no API key can be used by accident.
+# "api_key": --bare plus ANTHROPIC_API_KEY, billed per token.
+#
+# Claude Code prefers, in -p mode, ANTHROPIC_AUTH_TOKEN > ANTHROPIC_API_KEY > apiKeyHelper >
+# CLAUDE_CODE_OAUTH_TOKEN > profiles > /login (docs: authentication#authentication-precedence).
+# So in subscription mode every ANTHROPIC_* / CLAUDE* variable is removed from the child process.
+# That also drops what a parent Claude session exports (CLAUDE_CODE_SIMPLE would force bare mode,
+# ANTHROPIC_BASE_URL would reroute requests).
+_SCRUB_PREFIXES = ("ANTHROPIC_", "CLAUDE")
+_SCRUB_EXACT = {"CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY",
+                "AWS_BEARER_TOKEN_BEDROCK"}
+SUBSCRIPTION_METHODS = {"claude.ai", "claudeai", "claude_ai", "oauth", "oauth_token", "subscription"}
+
+
+def child_env(defaults, base=None):
+    env = dict(os.environ if base is None else base)
+    if defaults.get("auth", "subscription") == "api_key":
+        env.pop("CLAUDE_CODE_SIMPLE", None)
+        return env
+    for key in list(env):
+        if key.upper().startswith(_SCRUB_PREFIXES) or key.upper() in _SCRUB_EXACT:
+            del env[key]
+    env["CLAUDE_CONFIG_DIR"] = str(Path(defaults["claude_config_dir"]))
+    return env
+
+
+def auth_status(binary, defaults):
+    """`claude auth status` as the benchmark runs would see it. Returns (dict or None, error)."""
+    try:
+        out = subprocess.run([binary, "auth", "status"], capture_output=True, text=True, timeout=60,
+                             env=child_env(defaults), encoding="utf-8", errors="replace")
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, str(exc)
+    try:
+        return json.loads(out.stdout), None
+    except json.JSONDecodeError:
+        return None, (out.stdout + out.stderr).strip()[:500]
+
+
+def check_subscription_auth(binary, defaults):
+    """Refuse to run unless the clean profile is signed in with a subscription (not an API key)."""
+    if defaults.get("auth", "subscription") != "subscription":
+        return True, "auth mode is api_key (billed per token)"
+    status, err = auth_status(binary, defaults)
+    if status is None:
+        return False, f"could not read auth status: {err}"
+    method = str(status.get("authMethod", "")).lower()
+    if not status.get("loggedIn"):
+        return False, f"clean profile {defaults['claude_config_dir']} is not signed in"
+    if method not in SUBSCRIPTION_METHODS:
+        return False, (f"auth method is {status.get('authMethod')!r}, not a subscription login; refusing. "
+                       f"(If this is a subscription method with a new name, add it to SUBSCRIPTION_METHODS.)")
+    return True, f"signed in, authMethod={status.get('authMethod')}"
+
+
+def login_command(binary, defaults):
+    cfg = Path(defaults["claude_config_dir"])
+    clear = "; ".join(f"Remove-Item Env:{v} -ErrorAction SilentlyContinue"
+                      for v in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_SIMPLE"))
+    return f'{clear}; $env:CLAUDE_CONFIG_DIR = "{cfg}"; & "{binary}" auth login'
 
 
 def _version_key(v):
@@ -60,6 +126,7 @@ class StageSpec:
     agent: str = None
     agents_file: Path = None
     json_schema: dict = None
+    env: dict = None
 
 
 @dataclass
@@ -79,6 +146,8 @@ class StageResult:
     result_text: str = ""
     structured: dict = None
     timed_out: bool = False
+    rate_limited: bool = False
+    api_key_source: str = None
     error: str = None
     command: list = None
 
@@ -125,7 +194,7 @@ def run_stage(binary, spec, fake=None):
         spec.log_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
         res.exit_code = 0
     else:
-        env = dict(os.environ)
+        env = spec.env if spec.env is not None else dict(os.environ)
         try:
             with open(spec.log_path, "w", encoding="utf-8") as log:
                 proc = subprocess.run(cmd, cwd=spec.cwd, input=spec.prompt, stdout=log,
@@ -141,7 +210,37 @@ def run_stage(binary, spec, fake=None):
             res.error = f"could not start claude: {exc}"
     res.duration_s = round(time.monotonic() - start, 2)
     apply_result_event(res, read_result_event(spec.log_path))
+    scan = scan_log(spec.log_path)
+    res.api_key_source = scan["api_key_source"]
+    res.rate_limited = scan["rate_limited"] or bool(_LIMIT_TEXT.search(res.error or ""))
     return res
+
+
+_LIMIT_TEXT = re.compile(r"usage limit|rate limit|limit reached|limit will reset|resets at|out of extra usage",
+                         re.I)
+
+
+def scan_log(log_path):
+    """Read the startup event (which credential was used) and look for usage-limit failures."""
+    out = {"api_key_source": None, "rate_limited": False, "init": None}
+    if not Path(log_path).exists():
+        return out
+    with open(log_path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if not line.startswith("{"):
+                continue
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if ev.get("type") == "system" and ev.get("subtype") == "init" and out["init"] is None:
+                out["init"] = ev
+                out["api_key_source"] = ev.get("apiKeySource")
+            elif ev.get("type") == "system" and ev.get("subtype") == "api_retry" and ev.get("error") == "rate_limit":
+                out["rate_limited"] = True
+            elif ev.get("type") == "result" and ev.get("is_error") and _LIMIT_TEXT.search(str(ev.get("result", ""))):
+                out["rate_limited"] = True
+    return out
 
 
 def read_result_event(log_path):

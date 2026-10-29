@@ -3,7 +3,9 @@
   python -m ate list                         tasks and configs
   python -m ate validate [--tasks t01]       each task: snapshot fails hidden tests, solution passes
   python -m ate run --dry-run                whole pipeline, no API calls, zero cost
-  python -m ate run --tasks t01 --configs A --reps 1 --max-total-usd 1 --yes    real (paid) run
+  python -m ate auth                         is the clean subscription profile signed in?
+  python -m ate run --tasks t01 --configs A --reps 1 --max-total-usd 0.5 --yes    real run
+  python -m ate run --resume <sweep_id> ...  continue after a usage-limit stop (same flags)
   python -m ate report results/<sweep>.jsonl
 """
 import argparse
@@ -14,7 +16,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import REPO_ROOT, claude, config, grade, pipeline, report, tasks
+from . import REPO_ROOT, claude, config, grade, pipeline, report, results, tasks
 
 
 def _harness_sha():
@@ -82,51 +84,114 @@ def cmd_run(args):
     est, cap = _estimate(task_ids, config_ids, args.reps, defaults)
     binary = claude.find_claude()
 
+    subscription = defaults.get("auth", "subscription") == "subscription"
     print(f"plan: {len(task_ids)} tasks x {len(config_ids)} configs x {args.reps} reps = {n_runs} runs, "
-          f"model={defaults['model']}")
+          f"model={defaults['model']}, auth={defaults.get('auth', 'subscription')}")
     if args.dry_run:
         print("mode: DRY RUN (fake CLI, no API calls, $0.00)" + (" + oracle solutions" if args.oracle else ""))
     else:
-        print(f"estimate: ~${est:.2f} (worst case if every run hits its ${defaults['run_budget_usd']:.2f} cap: ${cap:.2f})")
+        kind = "API-equivalent (uses plan usage, billed $0)" if subscription else "billed to the API key"
+        print(f"estimate: ~${est:.2f} {kind} (worst case if every run hits its "
+              f"${defaults['run_budget_usd']:.2f} cap: ${cap:.2f})")
         if not binary:
             print("claude CLI not found; set CLAUDE_BIN")
             return 2
+        ok, msg = claude.check_subscription_auth(binary, defaults)
+        print(f"auth: {msg}")
+        if not ok:
+            print("refusing to start. Sign the clean profile in once, in PowerShell:\n  "
+                  + claude.login_command(binary, defaults))
+            return 2
         if args.max_total_usd is None:
-            print("refusing to start: pass --max-total-usd for any paid run")
+            print("refusing to start: pass --max-total-usd (on a subscription it caps API-equivalent usage)")
             return 2
         if not args.yes:
             print("refusing to start: re-run with --yes after reading the estimate above")
             return 2
 
-    sweep_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ("-dry" if args.dry_run else "") + ("-oracle" if args.oracle else "")
     results_dir = Path(args.results_dir) if args.results_dir else REPO_ROOT / "results"
-    results_path = results_dir / f"{sweep_id}.jsonl"
+    previous = []
+    if args.resume:
+        sweep_id = args.resume
+        results_path = results_dir / f"{sweep_id}.jsonl"
+        if not results_path.exists():
+            print(f"no results file for sweep {sweep_id} in {results_dir}")
+            return 2
+        previous = results.read([results_path])
+    else:
+        sweep_id = (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                    + ("-dry" if args.dry_run else "") + ("-oracle" if args.oracle else ""))
+        results_path = results_dir / f"{sweep_id}.jsonl"
+    plan = _plan_keys(task_ids, config_ids, args.reps)
+    done = {(r["task_id"], r["config_id"], r["rep"]) for r in previous
+            if r["status"] not in pipeline.RETRYABLE}
+    attempts = {}
+    for r in previous:
+        key = (r["task_id"], r["config_id"], r["rep"])
+        attempts[key] = max(attempts.get(key, 0), r.get("attempt", 1))
+    if previous:
+        print(f"resume: {len(done & plan)} of {n_runs} runs already done")
+
     version = "dry-run" if args.dry_run else claude.claude_version(binary)
     sha = _harness_sha()
-    spent = 0.0
+    spent = sum(r["cost_usd"] for r in previous)  # the cap covers the whole sweep, resumed or not
+    halt = None
     # Interleave configs within each task+rep so time-of-day effects hit every config equally.
     for rep in range(1, args.reps + 1):
         for tid in task_ids:
             task = tasks.load_task(tid)
             for cid in config_ids:
+                key = (tid, cid, rep)
+                if halt or key in done:
+                    continue
                 if args.max_total_usd is not None and spent >= args.max_total_usd:
-                    print(f"stopping: spent ${spent:.2f} >= --max-total-usd {args.max_total_usd}")
-                    break
+                    halt = f"spent ${spent:.2f} >= --max-total-usd {args.max_total_usd}"
+                    continue
                 cfg = config.load_config(cid)
                 rec = pipeline.run_one(task, cfg, rep, defaults=defaults, sweep_id=sweep_id,
                                        work_root=work_root, results_path=results_path, binary=binary,
                                        claude_version=version, harness_sha=sha,
                                        fake=(pipeline.make_fake(task if args.oracle else None)
                                              if args.dry_run else None),
-                                       keep_worktree=not args.cleanup)
+                                       keep_worktree=not args.cleanup, attempt=attempts.get(key, 0) + 1)
                 spent += rec["cost_usd"]
                 stages = "+".join(s["name"] for s in rec["stages"])
                 print(f"  {tid} {cid} r{rep}: {rec['status']:<15} tests {rec['tests']['passed']}/"
                       f"{rec['tests']['total']}  ${rec['cost_usd']:.3f}  {rec['agent_wall_s']:.1f}s  [{stages}]"
-                      + (f"  ERROR {rec['error']}" if rec["error"] else ""))
+                      + (f"  ERROR {rec['error']}" if rec["error"] else "")
+                      + (f"  ISOLATION {rec['isolation_flags']}" if rec.get("isolation_flags") else ""))
+                if rec["status"] == "rate_limited":
+                    halt = "usage limit reached"
+                elif rec["status"] == "auth_error":
+                    halt = "a stage did not use the subscription login"
+                elif rec.get("isolation_flags") and not args.dry_run:
+                    halt = "personal Claude setup leaked into a run"
+    if halt:
+        print(f"stopped: {halt}. Continue later with the same flags plus: --resume {sweep_id}")
     print(f"results: {results_path}")
-    print(f"total spend: ${spent:.3f}")
-    return 0
+    print(f"total {'API-equivalent ' if subscription else ''}spend: ${spent:.3f}")
+    return 3 if halt else 0
+
+
+def _plan_keys(task_ids, config_ids, reps):
+    return {(t, c, r) for r in range(1, reps + 1) for t in task_ids for c in config_ids}
+
+
+def cmd_auth(_args):
+    defaults = config.load_defaults()
+    binary = claude.find_claude()
+    if not binary:
+        print("claude CLI not found; set CLAUDE_BIN")
+        return 2
+    print(f"auth mode: {defaults.get('auth', 'subscription')}")
+    print(f"clean profile: {defaults.get('claude_config_dir')}")
+    status, err = claude.auth_status(binary, defaults)
+    print(f"claude auth status: {status if status is not None else err}")
+    ok, msg = claude.check_subscription_auth(binary, defaults)
+    print(("OK: " if ok else "NOT READY: ") + msg)
+    if not ok:
+        print("Sign in once, in PowerShell (opens your browser):\n  " + claude.login_command(binary, defaults))
+    return 0 if ok else 1
 
 
 def cmd_report(args):
@@ -155,11 +220,15 @@ def main(argv=None):
     r.add_argument("--work-root", help="where seeds/worktrees/logs go (default from defaults.json)")
     r.add_argument("--results-dir", help="default: results/")
     r.add_argument("--cleanup", action="store_true", help="delete worktrees after grading")
-    r.add_argument("--yes", action="store_true", help="confirm a paid run")
+    r.add_argument("--yes", action="store_true", help="confirm a real (non-dry) run")
+    r.add_argument("--resume", metavar="SWEEP_ID",
+                   help="continue a sweep: skip finished runs, re-run rate_limited/auth_error/harness_error ones")
+    sub.add_parser("auth", help="is the clean subscription profile signed in?")
     rp = sub.add_parser("report")
     rp.add_argument("files", nargs="+")
     args = p.parse_args(argv)
-    return {"list": cmd_list, "validate": cmd_validate, "run": cmd_run, "report": cmd_report}[args.cmd](args) or 0
+    return {"list": cmd_list, "validate": cmd_validate, "run": cmd_run, "report": cmd_report,
+            "auth": cmd_auth}[args.cmd](args) or 0
 
 
 if __name__ == "__main__":

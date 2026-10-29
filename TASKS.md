@@ -80,17 +80,21 @@ Done when:
 
 ## Blocked
 
-### T-1: Smoke run (user): one task, config A, one rep
+### T-1: Smoke run (user): one task, config A, one rep, on the subscription
 Status: Blocked
 Owns: configs/defaults.json (`estimate_usd_per_stage` only); DESIGN.md §4 cost tables
-Blocked by: user. Needs `ANTHROPIC_API_KEY` set for the CLI (bare mode) and an OK for about $0.10-0.40
+Blocked by: user. (1) Turn off "extra usage" in claude.ai settings. (2) Sign in the clean profile once:
+`python -m ate auth` prints the command; it must then say OK. (3) Note the plan usage % right before,
+and OK the run. Expected: about 1-3% of a usage window, $0 billed.
 Why: Every cost number in DESIGN.md is a guess until one real run exists. The smoke run also checks
-three things the dry run can't: `--agents` with `--agent` in bare mode, `structured_output` in the
-stream-json result event, and Windows quoting of `--allowedTools`.
+what the dry run can't: the clean profile really is clean (`isolation_flags` empty), `apiKeySource`
+is "none", `--agents` + `--agent` work, `structured_output` appears in the stream-json result event,
+and Windows quoting of `--allowedTools` is right.
 Command: `python -m ate run --tasks t01 --configs A --reps 1 --run-budget 0.5 --max-total-usd 0.5 --yes`
 Done when:
-- [ ] One real record in results/ with non-zero cost and tokens; `leak_suspected` empty
-- [ ] Then a one-rep B run on t01 (user OK, about $0.50) confirms the reviewer returns a parsed verdict
+- [ ] One real record in results/ with non-zero tokens, `auth: subscription`, empty `leak_suspected` and `isolation_flags`
+- [ ] Usage % before/after recorded next to the run's API-equivalent cost (DESIGN §4)
+- [ ] Then the calibration sweep (t01+t02 x A,B,C x 1 rep = 6 runs, user OK) confirms the reviewer returns a parsed verdict and the planner a plan
 - [ ] DESIGN §4 tables updated from measured numbers, with the sweep ids
 
 ### T-8: Tasks t06-t15 (second batch)
@@ -147,13 +151,11 @@ Why: Worktrees outside the repo stop accidental leaks, not a determined search o
 Done when:
 - [ ] Opt-in `--sandbox docker` mounts only the worktree; leak check still runs
 
-### T-14: Subscription (non-bare) mode
-Status: Blocked
-Owns: ate/claude.py (non-bare branch only); DESIGN.md §2 bare paragraph
-Blocked by: T-1
-Why: Lets someone without an API key run it. Costs become estimates under plan limits.
-Done when:
-- [ ] `"bare": false` run verified once; user CLAUDE.md/plugins confirmed not loaded (e.g. `--safe-mode` plus `--agents`), or the limitation documented
+### T-14: Subscription mode (built; real-run check is part of T-1)
+Status: Done (code); verification rides on T-1
+Clean profile via CLAUDE_CONFIG_DIR, scrubbed env (no ANTHROPIC_*/CLAUDE* vars), pre-flight
+`claude auth status` check, apiKeySource and personal-CLAUDE.md canary checks, `rate_limited`
+status that halts the sweep, `--resume`. Tests in tests/test_harness.py (TestSubscriptionSafety, TestResume).
 
 ### T-15: Publish (user): GitHub repo, CI, README results
 Status: Blocked

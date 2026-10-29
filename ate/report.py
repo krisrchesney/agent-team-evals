@@ -21,9 +21,17 @@ def wilson(k, n, z=1.96):
     return (max(0.0, centre - half), min(1.0, centre + half))
 
 
+RETRYABLE = ("rate_limited", "auth_error", "harness_error")
+
+
+def counted(records):
+    """Runs that say something about the config. Retryable failures are left out."""
+    return [r for r in records if r["status"] not in RETRYABLE]
+
+
 def summarise(records):
     by_cfg = defaultdict(list)
-    for r in records:
+    for r in counted(records):
         by_cfg[r["config_id"]].append(r)
     rows = []
     for cid in sorted(by_cfg):
@@ -47,7 +55,7 @@ def summarise(records):
 
 def per_task(records):
     grid = defaultdict(lambda: defaultdict(list))
-    for r in records:
+    for r in counted(records):
         grid[r["task_id"]][r["config_id"]].append(r["passed"])
     return grid
 
@@ -55,6 +63,8 @@ def per_task(records):
 def render(records):
     if not records:
         return "no records"
+    if not counted(records):
+        return f"no countable records ({len(records)} retryable); re-run with --resume"
     dry = any(r["dry_run"] for r in records)
     out = []
     if dry:
@@ -74,10 +84,17 @@ def render(records):
     for tid in sorted(grid):
         cells = [f"{sum(grid[tid][c])}/{len(grid[tid][c])}" if grid[tid][c] else "-" for c in cfgs]
         out.append(f"| {tid} | " + " | ".join(cells) + " |")
-    problems = [r for r in records if r["status"] in ("harness_error",) or r["leak_suspected"] or r["read_only_violations"]]
+    skipped = len(records) - len(counted(records))
+    if skipped:
+        out.append(f"\n{skipped} run(s) left out (rate_limited / auth_error / harness_error); re-run with --resume.")
+    if any(r.get("auth") == "subscription" for r in records):
+        out.append("\nCost is Claude Code's API-equivalent estimate; on a subscription nothing is billed per token.")
+    problems = [r for r in records if r["status"] in RETRYABLE or r["leak_suspected"]
+                or r["read_only_violations"] or r.get("isolation_flags")]
     if problems:
         out.append("\nFlags:")
         for r in problems:
             out.append(f"- {r['run_id']}: status={r['status']} leak={r['leak_suspected']} "
-                       f"read_only_violations={r['read_only_violations']} error={r['error']}")
+                       f"read_only_violations={r['read_only_violations']} "
+                       f"isolation={r.get('isolation_flags')} error={r['error']}")
     return "\n".join(out)

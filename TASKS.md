@@ -71,10 +71,13 @@ fix working (agent ran unittest via PowerShell) and no MCP servers: 46,605 token
 39,695 cache-read, 1,823 output), 7 turns, 22 s, 7x fewer tokens than attempt 1. Rejected again: three
 account-synced plugins (cowork-plugin-management, data, databricks; 75 skills) were loaded, and auto-memory
 was live in the clean profile (a run could leave notes for the next). Fix: `--safe-mode` for subscription runs.
-Next: one more smoke run, with the user's OK, to confirm `isolation_flags` is empty.
+Third attempt, sweep 20261029T172613Z (kept in results/): passed 11/11, 44,017 tokens, 7 turns, 17.6 s,
+`isolation_flags` and `leak_suspected` empty, apiKeySource none, PowerShell as the shell, no MCP, synced
+plugins or memory. First accepted record. Still open: whether `--safe-mode` keeps the `--agents` roles for
+B and C (the calibration run answers it).
 Done when:
-- [ ] One real record in results/ with non-zero tokens, `auth: subscription`, empty `leak_suspected` and `isolation_flags`
-- [ ] Usage % before/after recorded next to the run's tokens, turns, time and API-equivalent $ (DESIGN §4)
+- [x] One real record in results/ with non-zero tokens, `auth: subscription`, empty `leak_suspected` and `isolation_flags`
+- [x] Usage recorded (DESIGN §4): tokens, turns, time, API-equivalent $; the plan bars are too coarse (1-point steps) to resolve one run
 - [ ] Then the calibration sweep (t01+t02 x A,B,C x 1 rep = 6 runs, user OK) confirms the reviewer returns a parsed verdict and the planner a plan
 - [ ] DESIGN §4 tables updated from measured numbers, with the sweep ids
 

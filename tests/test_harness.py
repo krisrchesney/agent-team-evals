@@ -253,6 +253,38 @@ class TestSubscriptionSafety(unittest.TestCase):
         self.assertIn("--safe-mode", claude.build_command("claude", claude.StageSpec(**base, bare=False, safe_mode=True)))
         self.assertNotIn("--safe-mode", claude.build_command("claude", claude.StageSpec(**base)))
 
+    def test_roles_reach_the_cli_in_safe_mode_without_the_agent_flags(self):
+        base = dict(name="review", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet", max_turns=5,
+                    cap_api_equiv_usd=1.0, timeout_s=10, permission_mode="acceptEdits", tools="Read",
+                    allowed_tools=["Read"], agent="reviewer", agents_file=Path("agents.json"))
+        safe = claude.build_command("claude", claude.StageSpec(**dict(base, agents_file=None), bare=False,
+                                                              safe_mode=True, role_prompt="ROLE TEXT"))
+        self.assertIn("ROLE TEXT", safe)
+        self.assertNotIn("--agent", safe)
+        self.assertNotIn("--agents", safe)
+        classic = claude.build_command("claude", claude.StageSpec(**base))
+        self.assertIn("--agent", classic)
+        self.assertNotIn("--append-system-prompt", classic)
+
+    def test_real_run_commands_for_b_and_c_carry_their_role_text(self):
+        # Dry runs record the exact command each stage would run; check B and C against the role files.
+        defaults = config.load_defaults()
+        task = tasks.load_task(tasks.list_tasks()[0])
+        for cid, roles in (("B", {"build": "builder", "review": "reviewer", "fix": "builder"}),
+                           ("C", {"plan": "planner", "build_1": "builder", "review": "reviewer"})):
+            with tempfile.TemporaryDirectory() as tmp:
+                rec = pipeline.run_one(task, config.load_config(cid), 1, defaults=defaults, sweep_id="t",
+                                       work_root=Path(tmp), results_path=Path(tmp) / "r.jsonl", binary=None,
+                                       claude_version="x", harness_sha=None, fake=pipeline.make_fake(None))
+            agents = config.load_agents(config.load_config(cid)["agents_dir"])
+            for stage in rec["stages"]:
+                want = roles.get(stage["name"])
+                cmd = " ".join(stage["command"])
+                if want:
+                    self.assertIn("--append-system-prompt", cmd, (cid, stage["name"]))
+                    self.assertIn(f"{len(agents[want]['prompt'])} chars", cmd)
+                    self.assertNotIn("--agent ", cmd)
+
     def test_strict_mcp_flag_always_present(self):
         spec = claude.StageSpec(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet",
                                 max_turns=5, cap_api_equiv_usd=1.0, timeout_s=10, permission_mode="acceptEdits",
@@ -295,6 +327,24 @@ class TestSubscriptionSafety(unittest.TestCase):
                                         claude_version="x", harness_sha=None, fake=None)
         finally:
             claude.run_stage = orig
+
+    def test_stage_that_never_reached_the_model_is_retryable(self):
+        defaults = config.load_defaults()
+        task = tasks.load_task(tasks.list_tasks()[0])
+        orig = claude.run_stage
+        def stage(binary, spec, fake=None):
+            return claude.StageResult(name=spec.name, agent=spec.agent, exit_code=1,
+                                      error="--agent 'builder' not found")
+        claude.run_stage = stage
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                rec = pipeline.run_one(task, config.load_config("A"), 1, defaults=defaults, sweep_id="t",
+                                       work_root=Path(tmp), results_path=Path(tmp) / "r.jsonl", binary="x",
+                                       claude_version="x", harness_sha=None, fake=None)
+        finally:
+            claude.run_stage = orig
+        self.assertEqual(rec["status"], "harness_error")
+        self.assertIn("harness_error", pipeline.RETRYABLE)
 
     def test_personal_claude_md_canary(self):
         rec = self._run_with(lambda spec: [

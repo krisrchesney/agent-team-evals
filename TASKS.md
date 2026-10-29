@@ -85,9 +85,11 @@ Done when:
 - [x] DESIGN §4 tables updated from measured numbers, with the sweep ids
 
 ### T-16: Pilot sweep (user): 5 tasks x A,B,C x 3 reps = 45 runs
-Status: Blocked
+Status: Armed 2026-10-29 15:53 local. Starts itself at 17:30 local (US Central) through a session background
+task (id bpaatmwsh) running D:\ate-work\pilot-launch.ps1; log D:\ate-work\pilot-launch.log. It stops if the
+app closes, the PC sleeps or the user logs out; it will not start if it wakes more than 2 h late.
 Owns: results/<sweep>.jsonl (new); README.md results section; DESIGN.md section 4 pilot numbers
-Blocked by: user. Needs the user's go and a time window when they are not using Claude heavily.
+Blocked by: nothing once it has run; the user chose the 17:30 start (relayed 2026-10-29).
 Why: First real pass-rate table, and the usage data that decides whether the full sweep fits.
 Command: `powershell -File scripts\run_sweep.ps1 -Tasks "t01,t02,t03,t04,t05" -Reps 3`
 (run cap 1.5 and sweep cap 15 API-equivalent dollars: runaway guards, about 3x the expected total, and a

@@ -1,0 +1,8 @@
+{
+  "id": "t05-env-config",
+  "title": "Environment-variable overrides for an INI settings loader",
+  "category": "ambiguous-spec",
+  "difficulty": "medium",
+  "language": "python",
+  "test_timeout_s": 60
+}

@@ -32,6 +32,10 @@ python -m ate auth                       # signed in? if not, prints the one-tim
 python -m ate run --tasks t01 --configs A --reps 1 --run-cap 0.5 --max-total-api-equiv 0.5 --yes
 ```
 
+`ate` finds the CLI itself: `CLAUDE_BIN`, then `claude` on PATH, then the newest bundled copy under
+`%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude\claude-code` (the real path in an ordinary
+PowerShell). `ate auth` prints the path it resolved.
+
 A run that hits your usage limit stops the sweep; continue it later with `--resume <sweep_id>`.
 
 Python 3.12, standard library only. Worktrees and transcripts go to `D:/ate-work`

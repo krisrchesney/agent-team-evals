@@ -17,16 +17,41 @@ from pathlib import Path
 
 def find_claude():
     """CLAUDE_BIN env var, then PATH, then the desktop app's bundled CLI (newest version)."""
-    if os.environ.get("CLAUDE_BIN"):
-        return os.environ["CLAUDE_BIN"]
+    env = os.environ
+    if env.get("CLAUDE_BIN"):
+        return env["CLAUDE_BIN"]
     found = shutil.which("claude")
     if found:
         return found
-    appdata = os.environ.get("APPDATA", "")
-    hits = glob.glob(os.path.join(appdata, "Claude", "claude-code", "*", "*", "claude.exe"))
-    if hits:
-        return max(hits, key=lambda p: _version_key(Path(p).parent.parent.name))
-    return None
+    hits = bundled_candidates(env)
+    return max(hits, key=lambda h: (_version_key(h[0]), -h[2]))[1] if hits else None
+
+
+def bundled_roots(env):
+    """Where the desktop app keeps its bundled CLI, best first.
+
+    The desktop app is a packaged Windows app. Inside its own sessions the Roaming folder is redirected
+    to the package's private copy, but in an ordinary PowerShell that redirect does not exist and only
+    the real location (LOCALAPPDATA/Packages/Claude_*/LocalCache/Roaming) works. So the real package
+    path is tried first, and APPDATA only as a fallback.
+    """
+    roots = []
+    local = env.get("LOCALAPPDATA")
+    if local:
+        roots += sorted(glob.glob(os.path.join(local, "Packages", "Claude_*", "LocalCache", "Roaming",
+                                               "Claude", "claude-code")))
+    if env.get("APPDATA"):
+        roots.append(os.path.join(env["APPDATA"], "Claude", "claude-code"))
+    return roots
+
+
+def bundled_candidates(env):
+    """[(version, path, root_rank)] for every claude.exe under the bundled roots."""
+    out = []
+    for rank, root in enumerate(bundled_roots(env)):
+        for exe in glob.glob(os.path.join(root, "*", "*", "claude.exe")):
+            out.append((Path(exe).parent.parent.name, exe, rank))
+    return out
 
 
 # --- auth -------------------------------------------------------------------------------------

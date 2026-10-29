@@ -190,6 +190,7 @@ def cmd_auth(_args):
     if not binary:
         print("claude CLI not found; set CLAUDE_BIN")
         return 2
+    print(f"claude CLI: {binary} (version {claude.claude_version(binary)})")
     print(f"auth mode: {defaults.get('auth', 'subscription')}")
     print(f"clean profile: {defaults.get('claude_config_dir')}")
     status, err = claude.auth_status(binary, defaults)

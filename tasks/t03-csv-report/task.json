@@ -1,0 +1,8 @@
+{
+  "id": "t03-csv-report",
+  "title": "Extend a multi-module CSV report CLI",
+  "category": "multi-file",
+  "difficulty": "medium",
+  "language": "python",
+  "test_timeout_s": 60
+}

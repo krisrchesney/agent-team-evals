@@ -293,9 +293,26 @@ isolation controls. On the plan's bars: the weekly bar moved about 1 point acros
 (about 370k tokens) and the session bar moved 1 point for the first one. At 1-point resolution that is as
 precise as the bars get, so tokens, not bar percentages, are the unit to compare.
 
-Expectation to test, not a result: B uses roughly 1.5–2× A's tokens and C roughly 2.5–3.5×, because
-each added stage re-reads the repo. If the smoke run shows one run uses more than a few percent of a
-window, the pilot is split across more windows or trimmed (fewer reps first, never fewer configs).
+**Calibration** (sweep `20261029T173012Z`: t01 and t02, A/B/C, one run each, Sonnet 5.5; all six passed):
+
+| Config | tokens / run | turns | median wall | API-equiv $ | vs A (tokens) |
+|---|---|---|---|---|---|
+| A single agent | 65,528 | 9.0 | 25.0 s | 0.052 | 1.00× |
+| B builder + reviewer | 107,367 | 14.5 | 39.3 s | 0.123 | 1.64× |
+| C planner + builder + reviewer | 131,071 | 18.0 | 51.2 s | 0.140 | 2.00× |
+
+Two runs per config on the two easiest tasks, so these ratios are a first estimate, not a finding. What
+the six runs did settle: roles reach the CLI through `--append-system-prompt` and the reviewer and planner
+return valid `structured_output`; no read-only violations, leaks or isolation flags; the planner chose a
+single subtask on both easy tasks; on t02 the reviewer asked for changes and the fix round ran (B), which
+is the only time a fix round happened. Per stage, a builder used about 44-62k tokens, a reviewer about
+22-47k and a planner about 45k, which is why B and C cost 1.6-2× A rather than 2-3×.
+
+Planning figure for the pilot (45 runs = 5 tasks × A,B,C × 3 reps): about 100k tokens per run averaged
+over configs, so roughly 4.5M tokens, more if t03 (multi-file) pushes runs up. A full sweep (225 runs) is
+about 23M. The plan's bars can't resolve a 100k-token run, so after each chunk of a sweep the bar is a
+rough check only. If the pilot would pass about a quarter of a usage window, it is split across windows
+(fewer reps first, never fewer configs).
 
 The estimate `ate run` prints is deliberately crude and high: about $0.20 API-equivalent per stage,
 C always planning 3 subtasks, every fix round running. T-1 replaces the $0.20 with a measured number.

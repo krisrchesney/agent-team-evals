@@ -431,7 +431,7 @@ class TestReport(unittest.TestCase):
         self.assertEqual(hi, 1.0)
 
     def test_report_leads_with_usage_and_labels_dollars(self):
-        rec = {"config_id": "A", "task_id": "t", "status": "passed", "passed": True, "dry_run": False,
+        rec = {"config_id": "A", "task_id": "t", "rep": 1, "status": "passed", "passed": True, "dry_run": False,
                "tests": {"total": 2, "passed": 2, "failed": 0, "errors": 0},
                "tokens": {"input": 100, "output": 50, "cache_read": 1000, "cache_creation": 10},
                "num_turns": 7, "agent_wall_s": 12.0, "api_equiv_usd": 0.31, "fix_round": False,

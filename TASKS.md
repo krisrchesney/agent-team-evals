@@ -16,37 +16,6 @@ Template:
 
 ## Ready (independent: these can run as parallel sessions)
 
-### T-2: Task t03: multi-file CSV report CLI
-Status: Ready
-Owns: tasks/t03-*/ (new folder only)
-Blocked by: none
-Why: The two existing tasks are single-file. A planner can only help if some tasks need
-changes in several files.
-Done when:
-- [ ] Starting repo has 3+ modules (e.g. reader, aggregate, cli) and thin visible tests
-- [ ] prompt.md has numbered requirements touching at least 2 modules; each hidden test cites one
-- [ ] `python -m ate validate --tasks t03` prints OK; `python scripts/check.py` passes
-
-### T-3: Task t04: subtle bug hunt (interval merging)
-Status: Ready
-Owns: tasks/t04-*/ (new folder only)
-Blocked by: none
-Why: Tests whether a second reader (the reviewer) catches what the builder missed.
-Done when:
-- [ ] Starting code has 2 or more independent bugs (e.g. touching intervals, unsorted input), and the prompt describes the expected behaviour, not the bugs
-- [ ] Hidden tests cover each bug separately, so partial credit shows which were found
-- [ ] `validate` OK; check.py passes
-
-### T-4: Task t05: spec with an ambiguity (config file + env overrides)
-Status: Ready
-Owns: tasks/t05-*/ (new folder only)
-Blocked by: none
-Why: Do teams handle under-specified prompts better? The prompt states one deliberately
-ambiguous point plus a sentence that resolves it, and only careful readers notice.
-Done when:
-- [ ] The resolving sentence is in prompt.md, and a hidden test checks the resolved behaviour
-- [ ] `validate` OK; check.py passes
-
 ### T-5: Paired comparison in the report
 Status: Ready
 Owns: ate/report.py; tests/test_report.py (new)
@@ -175,3 +144,12 @@ Done when:
 Status: Done
 DESIGN.md, runner (`ate/`), configs A/B/C with roles, tasks t01-t02 with hidden tests and solutions,
 results schema, dry-run and oracle modes, scripts/check.py, Stop hook, this backlog.
+
+### T-2: Task t03: multi-file CSV report CLI
+Status: Done. Merged to master 2026-10-29: t03-csv-report (4/28 hidden tests pass on the start code, 28/28 with the reference).
+
+### T-3: Task t04: subtle bug hunt (interval merging)
+Status: Done. Merged to master 2026-10-29: t04-interval-merge (4/10 -> 10/10).
+
+### T-4: Task t05: spec with an ambiguity (config file + env overrides)
+Status: Done. Merged to master 2026-10-29: t05-env-config (0/18 -> 18/18).

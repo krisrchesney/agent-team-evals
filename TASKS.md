@@ -85,7 +85,7 @@ Done when:
 - [x] DESIGN §4 tables updated from measured numbers, with the sweep ids
 
 ### T-16: Pilot sweep (user): 5 tasks x A,B,C x 3 reps = 45 runs
-Status: Armed 2026-10-29 15:53 local. Starts itself at 17:30 local (US Central) through a session background
+Status: Done 2026-10-29 (started 17:09 local, 45 of 45 runs counted, sweep 20261029T220931Z; see README). Earlier: armed 15:53 local. Starts itself at 17:30 local (US Central) through a session background
 task (id bpaatmwsh) running D:\ate-work\pilot-launch.ps1; log D:\ate-work\pilot-launch.log. It stops if the
 app closes, the PC sleeps or the user logs out; it will not start if it wakes more than 2 h late.
 Owns: results/<sweep>.jsonl (new); README.md results section; DESIGN.md section 4 pilot numbers
@@ -96,9 +96,9 @@ Command: `powershell -File scripts\run_sweep.ps1 -Tasks "t01,t02,t03,t04,t05" -R
 run cap high enough that a long multi-file run is not cut off and counted as a failure).
 Audit before running (done 2026-10-29): every hidden test in t03-t05 traces to a numbered requirement.
 Done when:
-- [ ] 45 countable records, no `harness_error`/`rate_limited` left, `isolation_flags` and `leak_suspected` empty
-- [ ] `python -m ate report` table committed to README with the sweep id; usage per config in DESIGN section 4
-- [ ] Caveats written: 5 tasks, 3 reps, one model, wide intervals
+- [x] 45 countable records, no `harness_error`/`rate_limited` left, `isolation_flags` and `leak_suspected` empty
+- [x] `python -m ate report` table committed to README with the sweep id; usage per config in DESIGN section 4
+- [x] Caveats written: 5 tasks, 3 reps, one model, wide intervals
 
 ### T-8: Tasks t06-t15 (second batch)
 Status: Blocked

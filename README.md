@@ -10,8 +10,46 @@ pass rate on hidden tests, usage (tokens and turns), and wall-clock time.
 | B | builder + read-only reviewer, one round of fixes |
 | C | planner → builder(s) → reviewer → one fix round |
 
-**Status:** scaffolded and running end to end in dry-run mode. No real benchmark has run yet, so
-there are no results. See [DESIGN.md](DESIGN.md) for how and why, and [TASKS.md](TASKS.md) for what's next.
+**Status:** the harness runs end to end and a 45-run pilot is done (results below). See
+[DESIGN.md](DESIGN.md) for how and why, and [TASKS.md](TASKS.md) for what's next.
+
+## Pilot results
+
+Sweep `20261029T220931Z` (`results/20261029T220931Z.jsonl`): 5 hand-written tasks x configs A, B, C x 3
+runs = 45 runs, all on Claude Sonnet 5.5, on a Claude Max subscription (no per-token billing). All 45
+runs count: none was rejected, retried, flagged for isolation, leaks or read-only violations.
+
+| config | runs | pass rate (95% CI) | tokens / run | turns / run | median wall time | fix round ran |
+|---|---|---|---|---|---|---|
+| A single agent | 15 | 93% (70%-99%) | 70,947 | 8.7 | 20.6 s | n/a |
+| B builder + reviewer | 15 | 100% (80%-100%) | 114,189 (1.61x A) | 12.5 | 36.5 s | 7% |
+| C planner + builder + reviewer | 15 | 100% (80%-100%) | 196,607 (2.77x A) | 23.3 | 60.8 s | 20% |
+
+Tokens count input, output and cache reads and writes, summed over every stage. The whole sweep used
+5,726,145 tokens, 667 turns and 35 minutes of agent time. Passes per task (of 3 runs each): every cell is
+3/3 except config A on `t03-csv-report`, 2/3.
+
+What the pilot does and does not show:
+
+- **No evidence yet that a team passes more often.** The only failure in 45 runs was config A on t03,
+  run 1: it printed `0` instead of `0.00` for a group with no values (requirement 4). The pass-rate
+  intervals overlap almost entirely, and four of five tasks were solved by every run of every config.
+  These tasks are too easy to separate the configs.
+- **What the team costs is clear.** B used about 1.6x A's tokens and C about 2.8x, with 1.8x and 3.0x
+  the wall time. The gap grows with task difficulty: on the multi-file t03, A used about 123k tokens
+  per run, B 170k and C 374k.
+- **The reviewer did catch real problems.** It asked for changes in 4 of the 30 B and C runs
+  (t01 once, t03 three times), each pointing at a concrete defect, and the fix round turned all four into
+  passes. In one of them (t03, config C, run 2) it flagged the same `0` versus `0.00` bug that sank A's
+  one failure. That is suggestive, not proof: the same builder run might have passed without the review.
+- **The planner mostly wasn't needed.** It chose a single subtask in 12 of 15 C runs, so C's extra cost
+  is mostly the planning stage itself.
+
+Caveats: 5 tasks and 3 runs per task and config, one model, teams orchestrated by the harness in a
+fixed order (not by the model), and tasks written for this project. Differences under about 15 points
+of pass rate are not detectable at this size. Token counts are exact; the dollar figure in the raw
+records (`api_equiv_usd`) is Claude Code's API-price estimate, not a charge.
+
 
 ## Try it (no API calls, no plan usage)
 

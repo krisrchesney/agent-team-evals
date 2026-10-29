@@ -308,7 +308,14 @@ single subtask on both easy tasks; on t02 the reviewer asked for changes and the
 is the only time a fix round happened. Per stage, a builder used about 44-62k tokens, a reviewer about
 22-47k and a planner about 45k, which is why B and C cost 1.6-2× A rather than 2-3×.
 
-Planning figure for the pilot (45 runs = 5 tasks × A,B,C × 3 reps): about 100k tokens per run averaged
+**Pilot** (sweep `20261029T220931Z`, 45 runs, all counted): 5,726,145 tokens, 667 turns, 2,118 s of agent time,
+about 35 minutes of wall time. Per run: A 70,947 tokens, B 114,189 (1.61x), C 196,607 (2.77x). That is
+a little above the calibration ratios (1.64x and 2.00x for C), because t03 is much heavier for C
+(374k tokens per run against 123k for A). The sweep ran with a run cap of 1.5 and a sweep cap of 15
+API-equivalent dollars; no run came near either. Averaged over configs the pilot used about 127k tokens
+per run, against the 100k planned. A full 225-run sweep at that rate is about 28.6M tokens.
+
+Planning figure used before the pilot (45 runs = 5 tasks × A,B,C × 3 reps): about 100k tokens per run averaged
 over configs, so roughly 4.5M tokens, more if t03 (multi-file) pushes runs up. A full sweep (225 runs) is
 about 23M. The plan's bars can't resolve a 100k-token run, so after each chunk of a sweep the bar is a
 rough check only. If the pilot would pass about a quarter of a usage window, it is split across windows

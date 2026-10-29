@@ -17,15 +17,18 @@ Read DESIGN.md before your first ticket. It explains every choice below.
 - Commit identity: `git -c user.name="Kacey Chesney" -c user.email=k.c.chesney2016@gmail.com commit ...`
 - This machine has git 2.16: no `git worktree add -q`, no `git worktree remove`.
 
-## Money: the rule that matters most
+## Plan usage: the rule that matters most
+- **Runs on the user's Claude subscription. Report usage (tokens, turns, time), not dollars.**
+  `api_equiv_usd` is an API-price yardstick for comparing configs, never a charge; label it that way.
 - **Never start a real run** (`python -m ate run` without `--dry-run`) unless the user asked for that
-  exact run in this session and saw its estimate. Every real run needs `--max-total-usd` and `--yes`.
-  Dry runs and `validate` are free; use them freely.
-- Runs use the user's Claude subscription through the clean profile (`auth: subscription`). Never
-  switch to `auth: api_key`, set an API key, or weaken `child_env` / `check_subscription_auth`: the
-  user does not want to spend any extra money.
-- Never invent or "fill in" cost, token or pass-rate numbers. Only numbers from results/*.jsonl
-  produced by a real sweep go into README or DESIGN, with the sweep id next to them.
+  exact run in this session and saw its estimate. Every real run needs `--max-total-api-equiv` (a
+  runaway-loop cap, not a spending limit) and `--yes`. Dry runs and `validate` use no plan usage.
+- Runs use the clean profile (`auth: subscription`). Never switch to `auth: api_key`, set an API key,
+  or weaken `child_env` / `check_subscription_auth`: the user does not want to spend any extra money.
+- Smoke and calibration steps are expressed as a % of the plan's usage window, with the user noting
+  the claude.ai usage bar before and after.
+- Never invent or "fill in" usage or pass-rate numbers. Only numbers from results/*.jsonl produced by
+  a real sweep go into README or DESIGN, with the sweep id next to them.
 
 ## Models
 - Default to Sonnet (`"model": "sonnet"` in configs/defaults.json) for sweeps, roles and dev agents.

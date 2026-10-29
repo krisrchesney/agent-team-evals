@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "agent-team-evals run record",
-  "description": "One line of results/*.jsonl = one run of one config on one task (one repetition).",
+  "description": "One line of results/*.jsonl = one run of one config on one task (one repetition). Usage is the primary metric: tokens, turns, wall time. api_equiv_usd is an API-price yardstick for comparing configs, not a charge. Schema version 2 renamed cost_usd to api_equiv_usd and budget_usd to cap_api_equiv_usd.",
   "type": "object",
   "required": [
     "schema_version",
@@ -16,7 +16,7 @@
     "status",
     "passed",
     "tests",
-    "cost_usd",
+    "api_equiv_usd",
     "tokens",
     "agent_wall_s",
     "num_turns",
@@ -27,7 +27,7 @@
     "leak_suspected",
     "claude_version",
     "harness_sha",
-    "budget_usd"
+    "cap_api_equiv_usd"
   ],
   "properties": {
     "schema_version": {
@@ -62,21 +62,21 @@
     },
     "dry_run": {
       "type": "boolean",
-      "description": "True = no API calls were made; cost is zero."
+      "description": "True = no API calls were made; usage is zero."
     },
     "status": {
       "type": "string",
       "enum": [
         "passed",
         "failed",
-        "budget_exceeded",
+        "cap_exceeded",
         "timeout",
         "agent_error",
         "rate_limited",
         "auth_error",
         "harness_error"
       ],
-      "description": "passed/failed come from hidden tests. budget_exceeded/timeout/agent_error mean the pipeline stopped early (still graded; a fail if tests fail). rate_limited/auth_error/harness_error say nothing about the config: they are excluded from statistics and re-run by `ate run --resume`."
+      "description": "passed/failed come from hidden tests. cap_exceeded/timeout/agent_error mean the pipeline stopped early (still graded; a fail if tests fail). rate_limited/auth_error/harness_error say nothing about the config: they are excluded from statistics and re-run by `ate run --resume`."
     },
     "passed": {
       "type": "boolean",
@@ -92,9 +92,9 @@
       ],
       "description": "Hidden-test counts; passed/total is the partial-credit score."
     },
-    "cost_usd": {
+    "api_equiv_usd": {
       "type": "number",
-      "description": "Sum of total_cost_usd over all stages: Claude Code's client-side estimate at API prices. On a subscription nothing is billed per token; read it as API-equivalent cost."
+      "description": "What this run would cost at API prices (sum of Claude Code's total_cost_usd per stage). A yardstick for comparing configs. On a subscription nothing is charged."
     },
     "tokens": {
       "type": "object",
@@ -104,19 +104,19 @@
         "cache_read",
         "cache_creation"
       ],
-      "description": "Summed usage over all stages."
+      "description": "Primary usage metric. Summed over stages: input, output, cache_read, cache_creation."
     },
     "agent_wall_s": {
       "type": "number",
-      "description": "Wall-clock seconds spent in agent stages (excludes setup and grading)."
+      "description": "Primary usage metric. Wall-clock seconds in agent stages (excludes setup and grading)."
     },
     "num_turns": {
       "type": "integer",
-      "description": "Summed agentic turns over all stages."
+      "description": "Primary usage metric. Summed agentic turns over all stages."
     },
     "stages": {
       "type": "array",
-      "description": "Per-stage detail: name, agent, cost_usd, tokens, num_turns, duration_s, subtype, is_error, exit_code, structured, command."
+      "description": "Per-stage detail: name, agent, api_equiv_usd, tokens, num_turns, duration_s, subtype, is_error, exit_code, structured, command."
     },
     "review_verdict": {
       "type": [
@@ -170,9 +170,9 @@
       ],
       "description": "git HEAD of this repo when the run started."
     },
-    "budget_usd": {
+    "cap_api_equiv_usd": {
       "type": "number",
-      "description": "Per-run cap; stages share it."
+      "description": "Runaway-loop cap for this run in API-equivalent dollars (stages share it). Not a spending limit."
     },
     "worktree": {
       "type": [

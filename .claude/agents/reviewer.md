@@ -19,7 +19,7 @@ not commit, push, merge or change branches.
    ticket asks for it, that is an automatic CHANGES NEEDED.
 6. Check the benchmark's fairness rules in CLAUDE.md: same model and limits across configs,
    hidden tests never reachable from a worktree before grading, no real run without
-   `--max-total-usd` and `--yes`, cost numbers taken from `total_cost_usd` and not invented.
+   `--max-total-api-equiv` and `--yes`, cost numbers taken from `total_cost_usd` and not invented.
 
 Reply in this shape, nothing else:
 

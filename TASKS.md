@@ -2,7 +2,7 @@
 
 The shared board for every session. Statuses: Ready -> In progress -> Review -> Done.
 A ticket owns the files it lists. Two tickets in progress must never own the same file.
-Tickets marked **(user)** need the user's decision or money, so a session can't start them alone.
+Tickets marked **(user)** need the user's decision or use of their plan, so a session can't start them alone.
 
 Template:
 
@@ -54,14 +54,14 @@ Blocked by: none
 Why: Configs see the same tasks, so comparing them task by task is more powerful than overall rates.
 Done when:
 - [ ] `report` prints, for each pair (B-A, C-A, C-B), the pass-rate difference with a 95% paired bootstrap CI that resamples tasks, not runs (fixed seed)
-- [ ] Also prints $ per passed task with the same CI method
+- [ ] Also prints tokens per passed task with the same CI method
 - [ ] Unit tests on a hand-made record list with a known answer; stdlib only
 
 ### T-6: Chart script for the write-up
 Status: Ready
 Owns: scripts/plot.py (new); docs/figures/ (new)
 Blocked by: none
-Why: DESIGN §5: pass rate vs cost frontier, per-task grid, C's spend by stage.
+Why: DESIGN §5: pass rate vs usage (tokens) frontier, per-task grid, C's tokens by stage.
 Done when:
 - [ ] `python scripts/plot.py results/<sweep>.jsonl` writes 3 PNGs to docs/figures/
 - [ ] matplotlib imported only in this script; a clear message if it isn't installed
@@ -82,18 +82,18 @@ Done when:
 
 ### T-1: Smoke run (user): one task, config A, one rep, on the subscription
 Status: Blocked
-Owns: configs/defaults.json (`estimate_usd_per_stage` only); DESIGN.md §4 cost tables
+Owns: configs/defaults.json (`estimate_api_equiv_usd_per_stage` only); DESIGN.md §4 usage table
 Blocked by: user. (1) Turn off "extra usage" in claude.ai settings. (2) Sign in the clean profile once:
 `python -m ate auth` prints the command; it must then say OK. (3) Note the plan usage % right before,
-and OK the run. Expected: about 1-3% of a usage window, $0 billed.
-Why: Every cost number in DESIGN.md is a guess until one real run exists. The smoke run also checks
+and OK the run. Expected: roughly 1-3% of a usage window (a guess until measured), nothing billed.
+Why: Every usage figure in DESIGN.md is a guess until one real run exists. The smoke run also checks
 what the dry run can't: the clean profile really is clean (`isolation_flags` empty), `apiKeySource`
 is "none", `--agents` + `--agent` work, `structured_output` appears in the stream-json result event,
 and Windows quoting of `--allowedTools` is right.
-Command: `python -m ate run --tasks t01 --configs A --reps 1 --run-budget 0.5 --max-total-usd 0.5 --yes`
+Command: `python -m ate run --tasks t01 --configs A --reps 1 --run-cap 0.5 --max-total-api-equiv 0.5 --yes`
 Done when:
 - [ ] One real record in results/ with non-zero tokens, `auth: subscription`, empty `leak_suspected` and `isolation_flags`
-- [ ] Usage % before/after recorded next to the run's API-equivalent cost (DESIGN §4)
+- [ ] Usage % before/after recorded next to the run's tokens, turns, time and API-equivalent $ (DESIGN §4)
 - [ ] Then the calibration sweep (t01+t02 x A,B,C x 1 rep = 6 runs, user OK) confirms the reviewer returns a parsed verdict and the planner a plan
 - [ ] DESIGN §4 tables updated from measured numbers, with the sweep ids
 
@@ -109,10 +109,10 @@ Done when:
 Status: Blocked
 Owns: configs/A2.json (new); ate/pipeline.py (`run_one` loop only)
 Blocked by: T-7 (both touch pipeline.py)
-Why: Separates "more compute" from "better structure" (DESIGN §3). Two independent A attempts,
+Why: Separates "more usage" from "better structure" (DESIGN §3). Two independent A attempts,
 keep the first whose visible tests pass.
 Done when:
-- [ ] Each attempt gets a fresh worktree; cost is summed over both attempts
+- [ ] Each attempt gets a fresh worktree; usage is summed over both attempts
 - [ ] Dry-run oracle passes; check.py passes
 
 ### T-10: Config C-auto: Claude orchestrates the team itself
@@ -140,7 +140,7 @@ Owns: ate/__main__.py (sweep loop)
 Blocked by: T-1 (need real rate-limit behaviour first)
 Why: A full sweep is about 225 sequential runs. Parallel runs cut wall time; per-run wall-clock is unaffected.
 Done when:
-- [ ] Results are appended safely from several workers; `--max-total-usd` is still respected
+- [ ] Results are appended safely from several workers; `--max-total-api-equiv` is still respected
 - [ ] Default stays 1
 
 ### T-13: Container isolation for agent runs

@@ -29,7 +29,13 @@ def counted(records):
     return [r for r in records if r["status"] not in RETRYABLE]
 
 
+def total_tokens(r):
+    t = r["tokens"]
+    return t["input"] + t["output"] + t["cache_read"] + t["cache_creation"]
+
+
 def summarise(records):
+    """Usage first: tokens, turns and wall time. API-equivalent dollars are a yardstick, not a charge."""
     by_cfg = defaultdict(list)
     for r in counted(records):
         by_cfg[r["config_id"]].append(r)
@@ -39,15 +45,16 @@ def summarise(records):
         n = len(rs)
         k = sum(r["passed"] for r in rs)
         lo, hi = wilson(k, n)
-        cost = sum(r["cost_usd"] for r in rs)
+        tokens = sum(total_tokens(r) for r in rs)
         rows.append({
             "config": cid, "runs": n, "passed": k, "pass_rate": k / n if n else 0.0, "ci": (lo, hi),
             "partial": statistics.mean(r["tests"]["passed"] / r["tests"]["total"] if r["tests"]["total"] else 0 for r in rs),
-            "mean_cost": cost / n if n else 0.0,
-            "cost_per_pass": cost / k if k else float("inf"),
+            "mean_tokens": tokens / n if n else 0.0,
+            "mean_output": statistics.mean(r["tokens"]["output"] for r in rs),
+            "tokens_per_pass": tokens / k if k else float("inf"),
+            "mean_turns": statistics.mean(r["num_turns"] for r in rs),
             "median_wall": statistics.median(r["agent_wall_s"] for r in rs),
-            "mean_tokens": statistics.mean(r["tokens"]["input"] + r["tokens"]["output"]
-                                           + r["tokens"]["cache_read"] + r["tokens"]["cache_creation"] for r in rs),
+            "mean_api_equiv": statistics.mean(r["api_equiv_usd"] for r in rs),
             "fix_rate": sum(r["fix_round"] for r in rs) / n if n else 0.0,
         })
     return rows
@@ -68,14 +75,16 @@ def render(records):
     dry = any(r["dry_run"] for r in records)
     out = []
     if dry:
-        out.append("> DRY RUN data: no API calls were made; pass rates reflect unmodified snapshots.\n")
-    out.append("| config | runs | pass rate (95% CI) | hidden tests passed | mean $ / run | $ per pass | median wall s | mean tokens | fix round ran |")
-    out.append("|---|---|---|---|---|---|---|---|---|")
+        out.append("> DRY RUN data: fake agents, no API calls, no plan usage. These numbers say nothing about the configs.\n")
+    out.append("| config | runs | pass rate (95% CI) | hidden tests passed | tokens / run | output tokens / run "
+               "| tokens / pass | turns / run | median wall s | fix round ran | API-equiv $ / run (not a charge) |")
+    out.append("|---|---|---|---|---|---|---|---|---|---|---|")
     for s in summarise(records):
-        cpp = "n/a" if s["cost_per_pass"] == float("inf") else f"{s['cost_per_pass']:.3f}"
+        tpp = "n/a" if s["tokens_per_pass"] == float("inf") else f"{s['tokens_per_pass']:,.0f}"
         out.append(f"| {s['config']} | {s['runs']} | {s['pass_rate']:.0%} ({s['ci'][0]:.0%}-{s['ci'][1]:.0%}) | "
-                   f"{s['partial']:.0%} | {s['mean_cost']:.3f} | {cpp} | {s['median_wall']:.1f} | "
-                   f"{s['mean_tokens']:,.0f} | {s['fix_rate']:.0%} |")
+                   f"{s['partial']:.0%} | {s['mean_tokens']:,.0f} | {s['mean_output']:,.0f} | {tpp} | "
+                   f"{s['mean_turns']:.1f} | {s['median_wall']:.1f} | {s['fix_rate']:.0%} | "
+                   f"{s['mean_api_equiv']:.3f} |")
     grid = per_task(records)
     cfgs = sorted({r["config_id"] for r in records})
     out.append("\nPer task (passes / runs):\n")
@@ -88,7 +97,7 @@ def render(records):
     if skipped:
         out.append(f"\n{skipped} run(s) left out (rate_limited / auth_error / harness_error); re-run with --resume.")
     if any(r.get("auth") == "subscription" for r in records):
-        out.append("\nCost is Claude Code's API-equivalent estimate; on a subscription nothing is billed per token.")
+        out.append("\nRuns use the plan's usage. Tokens, turns and time are the usage metrics; the dollar column is Claude Code's API-equivalent estimate, for comparing configs, not a charge.")
     problems = [r for r in records if r["status"] in RETRYABLE or r["leak_suspected"]
                 or r["read_only_violations"] or r.get("isolation_flags")]
     if problems:

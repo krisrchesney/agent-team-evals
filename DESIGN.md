@@ -1,8 +1,10 @@
 # agent-team-evals: design
 
 **Question.** On the same set of coding tasks, does a team of Claude agents beat a single agent?
-"Beat" here covers three things: **pass rate** on tests the agents never saw, **cost** (tokens and
-dollars), and **wall-clock time**.
+"Beat" here covers three things: **pass rate** on tests the agents never saw, **usage** (tokens,
+turns), and **wall-clock time**. Runs use a Claude subscription, so nothing is billed per token and
+usage is the honest unit. Dollars appear only as an "API-equivalent" yardstick for comparing configs,
+never as a charge.
 
 | Config | What runs | Why it's in the study |
 |---|---|---|
@@ -47,7 +49,7 @@ Start with 5 hand-written tasks (2 are done, 3 are tickets), then grow to 20–3
 
 | Category | Example | Why it matters for the question |
 |---|---|---|
-| Bug fix + small feature | t01 slugify (done) | Single file. Teams should add cost and little value; a good control. |
+| Bug fix + small feature | t01 slugify (done) | Single file. Teams should add usage and little value; a good control. |
 | Feature with edge cases | t02 TTL cache (done) | Spec has interacting rules. A reviewer might catch the missed one. |
 | Multi-file change | t03 CSV report CLI (ticket) | Where a planner should help, if it ever does. |
 | Subtle bug hunt | t04 interval merge (ticket) | Tests whether a second reader finds what the first missed. |
@@ -73,7 +75,7 @@ claude -p                                   # print mode: run the prompt, exit (
   --output-format stream-json --verbose     # every event to a log; the last event is the result object
   --model sonnet                            # identical for every config and stage
   --max-turns 40                            # stop a stuck loop
-  --max-budget-usd <remaining run budget>   # hard dollar cap for this stage
+  --max-budget-usd <remaining run budget>   # runaway-loop cap (API-equivalent units) for this stage
   --permission-mode acceptEdits             # can edit files without asking
   --permission-prompts none                 # nobody is there to approve, so deny (don't hang)
   --tools Bash,Read,Edit,Write,Glob,Grep    # which tools exist (read-only stages drop Edit/Write)
@@ -92,7 +94,7 @@ run with a scrubbed environment: every `ANTHROPIC_*` / `CLAUDE*` variable remove
 whole transcript. We save it per stage, so when C loses to A on a task you can read why. The
 harness reads only the last `type: "result"` line for the numbers.
 
-**Auth: your Claude subscription, with no extra spend.** `"auth": "subscription"` in
+**Auth: your Claude subscription, no extra spend.** `"auth": "subscription"` in
 `configs/defaults.json` (the default). Runs count against your Pro/Max plan's usage limits, and
 nothing is billed per token. Getting there needed three safeguards:
 
@@ -117,12 +119,14 @@ your limits at API rates. Turn it off in claude.ai settings before any sweep. Th
 stops the run, and the harness records `rate_limited` and halts the sweep. `ate run --resume
 <sweep>` continues it in the next usage window. Rate-limited runs are re-run, never counted as fails.
 
-**What `cost_usd` means on a subscription.** Claude Code still reports `total_cost_usd`: what the
-run would have cost at API prices. Nobody is billed that amount, but it is the right yardstick for
-comparing configs ("C used 2.8× A's API-equivalent cost") and for sizing a usage window.
-`--max-budget-usd` and `--max-total-usd` work on the same estimate, so they throttle plan usage.
+**What `api_equiv_usd` means on a subscription.** Usage is the primary measure: tokens (in, out,
+cache), turns and wall time. Claude Code also reports `total_cost_usd`, what the run would have cost
+at API prices; we store it as `api_equiv_usd`. Nobody is billed that amount. It is a handy single
+number for comparing configs ("C used 2.8× A's tokens") and for sizing a usage window.
+`--max-budget-usd` and `--max-total-api-equiv` count in the same units, which makes them runaway-loop
+guards, not spending limits.
 
-`"auth": "api_key"` is still available: it adds `--bare` and uses `ANTHROPIC_API_KEY`, billed per token.
+`"auth": "api_key"` exists for completeness (adds `--bare`, uses `ANTHROPIC_API_KEY`, billed per token). Do not use it; see CLAUDE.md.
 
 **Why the prompt goes on stdin.** `--allowedTools` and `--tools` take a variable number of values
 and can swallow a positional prompt placed after them. Stdin avoids that.
@@ -161,13 +165,13 @@ B:  build → review → fix (only if CHANGES_NEEDED)
 C:  plan → build_1 … build_n (n = planner's subtasks, max 3) → review → fix (only if CHANGES_NEEDED)
 ```
 
-That gives exactly "one round of fixes", and every token is billed to a named stage, so you can
-say, for example, "the reviewer cost 18% of C's spend". An in-session variant (C-auto) is ticket
+That gives exactly "one round of fixes", and every token is attributed to a named stage, so you can
+say, for example, "the reviewer used 18% of C's tokens". An in-session variant (C-auto) is ticket
 T-10, as a separate config, because how well Claude orchestrates subagents is its own question.
 
 The fix round is a **fresh** builder process. It receives the task, the reviewer's findings and the
 working tree as the reviewer saw it. It does not `--resume` the build session, because resuming
-reports the conversation's cumulative cost and would blur the per-stage accounting. C's builders run
+reports the conversation's cumulative usage and would blur the per-stage accounting. C's builders run
 **sequentially in one worktree**: parallel builders would need merging, which is a different
 experiment (ticket T-12).
 
@@ -202,17 +206,17 @@ One JSONL record per (task, config, repetition). The schema is `docs/results.sch
 |---|---|---|
 | **Pass** (headline) | `passed` | every hidden test passes |
 | Partial credit | `tests.passed / tests.total` | shows "almost" vs "nowhere", which pass/fail hides |
-| **Cost, $** | `cost_usd` | sum of each stage's `total_cost_usd` (Claude Code's client-side estimate, subagents included) |
-| **Tokens** | `tokens.{input,output,cache_read,cache_creation}` | summed `usage` across stages. Cache reads are most of the input and cost 10× less, so they are kept separate |
-| **Wall-clock** | `agent_wall_s` | time spent in agent stages only (setup and grading excluded) |
-| Turns | `num_turns` | summed agentic turns |
+| **Tokens** (usage) | `tokens.{input,output,cache_read,cache_creation}` | summed `usage` across stages, subagents included. Cache reads are most of the input and count for far less, so the four kinds are kept apart |
+| **Turns** (usage) | `num_turns` | summed agentic turns |
+| **Wall-clock** (usage) | `agent_wall_s` | time spent in agent stages only (setup and grading excluded) |
+| API-equivalent $ | `api_equiv_usd` | sum of each stage's `total_cost_usd`, Claude Code's estimate at API prices. A yardstick that folds the token kinds into one number; **not a charge** |
 | Process | `review_verdict`, `fix_round`, `plan_subtasks`, per-stage `stages[]` | lets you ask, for example, "when the reviewer approved, how often was it wrong?" |
 | Change size | `diff`, `touched_tests` | bigger diffs at equal pass rate means more churn |
 | Integrity | `read_only_violations`, `leak_suspected`, `status` | runs to exclude or investigate |
 
-`status` is `passed` / `failed` when grading ran normally, and `budget_exceeded` / `timeout` /
+`status` is `passed` / `failed` when grading ran normally, and `cap_exceeded` / `timeout` /
 `agent_error` when the pipeline stopped early. Early-stopped runs are **still graded**, and they count
-as fails if the tests fail. A config that needs more budget than it's given has, for this study, failed.
+as fails if the tests fail. A config that needs more than the runaway-loop cap has, for this study, failed.
 
 ### Repetition and statistics
 
@@ -232,27 +236,32 @@ The same prompt gives different results run to run, so one run per task is an an
 
 ### The confound to address: more compute vs. better structure
 
-B and C spend more tokens than A. If they win, is it the team, or just more attempts? Ticket T-8
+B and C use more tokens than A. If they win, is it the team, or just more attempts? Ticket T-8
 adds config **A2**: two independent single-agent attempts, keeping the first whose *visible* tests
-pass, at roughly B's spend. If B beats A2 at equal cost, the structure is doing the work. Another
+pass, at roughly B's token usage. If B beats A2 at equal usage, the structure is doing the work. Another
 cheap ablation is **D = A + Stop-hook test gate** (T-13): the Boxwatch hook pattern, with no second
 agent.
 
 ---
 
-## 4. Cost guardrails
+## 4. Usage guardrails
 
-Three layers, all in place now:
+The subscription is never billed per token, so the guardrails protect two things: your plan's usage
+window, and against loops that run away. Three layers, all in place now:
 
-1. **Per-stage cap.** `--max-budget-usd` is set to whatever is left of the run's budget, so the
-   stages share one cap (default `run_budget_usd: 2.00`). Claude Code enforces it and stops the stage.
-   `--max-turns 40` and a 15-minute stage timeout catch loops that cost little per turn but never finish.
-2. **Per-sweep cap.** `--max-total-usd` is **required** for any non-dry run. The runner stops starting
-   new runs once cumulative spend reaches it. A run already in progress can overshoot by at most one
-   run budget.
-3. **Explicit go.** A real run checks the subscription login, prints its plan and an estimate, and refuses to start without `--yes`. It also halts at the first usage-limit hit (`rate_limited`) and can be continued with `--resume`.
+1. **Per-run cap (runaway-loop protection).** `--max-budget-usd` is set to whatever is left of the
+   run's cap, so the stages share it (default `run_cap_api_equiv_usd: 2.00`). The cap is in
+   API-equivalent units because that is the only unit Claude Code can count in; it is not a spending
+   limit. `--max-turns 40` and a 15-minute stage timeout catch loops that use little per turn but
+   never finish.
+2. **Per-sweep cap.** `--max-total-api-equiv` is **required** for any real run. The runner stops starting
+   new runs once cumulative API-equivalent usage reaches it. A run already in progress can overshoot by
+   at most one run cap.
+3. **Explicit go, and a clean stop at your limit.** A real run checks the subscription login, prints
+   its plan and estimate, and refuses to start without `--yes`. It halts at the first usage-limit hit
+   (`rate_limited`) and continues with `--resume`.
 
-Plus two **dry-run modes**, which never call the API:
+Plus two **dry-run modes**, which never call the API and use no plan usage:
 
 - `python -m ate run --dry-run`: a fake CLI returns canned events (reviewer says CHANGES_NEEDED,
   planner returns two subtasks), so every branch of every pipeline runs. Worktrees, prompts, command
@@ -261,38 +270,25 @@ Plus two **dry-run modes**, which never call the API:
 - `--dry-run --oracle`: fake builders copy in the reference solution, so the pass path, diff stats
   and grading are exercised too. `scripts/check.py` runs this on every change.
 
-### What a full run would cost (rough)
+### How much of the plan a sweep will use (not yet measured)
 
-These are estimates. Replace them with measured numbers after the first smoke run (ticket T-1).
-Assumptions: Sonnet 5.5 at $2 input / $10 output / $0.20 cache-read per million tokens; a small
-task takes a builder about 10–20 turns, and most input is cache reads of a ~20–40k-token context.
+Nothing has run yet, so there is no measured token count and no measured share of a usage window.
+The smoke and calibration runs (ticket T-1) produce those, with you noting the usage bar on
+claude.ai before and after each:
 
-| Stage | Guess per stage |
-|---|---|
-| A solve / builder | $0.15–0.40 |
-| reviewer | $0.08–0.15 |
-| planner | $0.08–0.15 |
-| fix (about half the runs) | $0.10–0.25 |
-
-| Config | Per run |
-|---|---|
-| A | ~$0.25 |
-| B | ~$0.45 |
-| C | ~$0.70 |
-| **A+B+C, one task, one rep** | **~$1.40** |
-
-| Sweep | Runs | Rough cost |
+| Step | Runs | What it measures |
 |---|---|---|
-| Smoke: 1 task × A × 1 rep | 1 | ~$0.10–0.40 (capped at $0.50) |
-| Pilot: 5 tasks × 3 configs × 3 reps | 45 | ~$20 (range $12–40) |
-| Full: 25 tasks × 3 configs × 3 reps | 225 | ~$105 (range $60–200) |
-| Full on Opus 5.5 ($4/$20) | 225 | roughly 2× that |
+| Smoke: t01 × A × 1 | 1 | % of the usage window for one run; tokens, turns, time; whether the clean profile is clean |
+| Calibration: t01+t02 × A,B,C × 1 | 6 | usage per config, so the ratios below become measured numbers |
+| Pilot: 5 tasks × A,B,C × 3 | 45 | first real pass-rate table; usage windows needed for the full sweep |
+| Full: 25 tasks × A,B,C × 3 | 225 | the write-up; likely several windows, run while you are away |
 
-The estimate `ate run` prints before a real sweep is cruder and deliberately high: it assumes
-$0.20 per stage, that C always plans 3 subtasks, and that every fix round runs (about $2.00 per
-task-rep instead of $1.40). T-1 replaces the $0.20 with a measured number.
-The worst case if every run hits its $2 cap is $450 for the full sweep. That is why
-`--max-total-usd` is required (for example `--max-total-usd 150`).
+Expectation to test, not a result: B uses roughly 1.5–2× A's tokens and C roughly 2.5–3.5×, because
+each added stage re-reads the repo. If the smoke run shows one run uses more than a few percent of a
+window, the pilot is split across more windows or trimmed (fewer reps first, never fewer configs).
+
+The estimate `ate run` prints is deliberately crude and high: about $0.20 API-equivalent per stage,
+C always planning 3 subtasks, every fix round running. T-1 replaces the $0.20 with a measured number.
 
 ---
 
@@ -300,18 +296,19 @@ The worst case if every run hits its $2 cap is $450 for the full sweep. That is 
 
 The final README section and chart answer the question in one picture plus a table:
 
-1. **Headline chart: pass rate vs. cost per run**, one point per config with Wilson error bars on
-   pass rate and an interquartile range on cost. The cost-quality frontier is visible at a glance:
-   is C up and to the right (better but pricier), or just to the right (pricier)?
+1. **Headline chart: pass rate vs. usage per run**, one point per config, with Wilson error bars on
+   pass rate and an interquartile range on tokens (the x-axis). The pass-rate-versus-usage frontier is
+   visible at a glance: is C up and to the right (better but heavier), or just to the right (heavier)?
 2. **Per-task grid** (tasks × configs, cell = passes/3): where teams help (multi-file, subtle bugs)
-   and where they only add cost (single-file fixes).
-3. **Table**: pass rate (CI), partial credit, mean $/run, **$ per passed task**, median wall time,
-   tokens, fix-round rate. "$ per passed task" is the number a team lead would budget with.
-4. **Where the money goes**: stacked bar of C's spend by stage (plan / build / review / fix).
+   and where they only add usage (single-file fixes).
+3. **Table**: pass rate (CI), partial credit, tokens / run, output tokens / run, **tokens per passed
+   task**, turns, median wall time, fix-round rate, with API-equivalent $ / run as the last column.
+   "Tokens per passed task" is the number to read for efficiency.
+4. **Where the usage goes**: stacked bar of C's tokens by stage (plan / build / review / fix).
 5. **Reviewer quality**: when the reviewer said APPROVE, how often did hidden tests pass? When
    it said CHANGES_NEEDED, did the fix round actually turn fails into passes?
 6. **Caveats, stated plainly**: task count and power, one model, harness-orchestrated teams, the
-   compute confound and what A2 showed, and the client-side cost estimate.
+   usage confound and what A2 showed, and that API-equivalent dollars are an estimate, not a charge.
 
 `python -m ate report results/*.jsonl` produces items 3 and part of 2 today (stdlib markdown).
 The chart script is ticket T-7 (matplotlib, dev-only dependency).
@@ -322,7 +319,7 @@ The chart script is ticket T-7 (matplotlib, dev-only dependency).
 
 ```
 ate/                 the runner (stdlib only): python -m ate {list,validate,run,report}
-  __main__.py        CLI, cost guards, sweep loop
+  __main__.py        CLI, usage caps, sweep loop
   pipeline.py        one run: worktree → stages → grade → record; dry-run fakes
   claude.py          builds the claude -p command, runs it, parses the result event
   workspace.py       seed repos, worktrees, read-only snapshot/restore
@@ -330,7 +327,7 @@ ate/                 the runner (stdlib only): python -m ate {list,validate,run,
   results.py         record validation + JSONL append
   report.py          markdown summary with Wilson intervals
 configs/
-  defaults.json      model, budgets, tools: shared by all configs
+  defaults.json      model, runaway-loop caps, tools: shared by all configs
   A.json B.json C.json   stage lists
   B/.claude/agents/  builder.md reviewer.md
   C/.claude/agents/  planner.md builder.md reviewer.md

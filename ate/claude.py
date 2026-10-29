@@ -1,8 +1,8 @@
-"""Build and run one headless `claude -p` stage, and parse its cost/token data.
+"""Build and run one headless `claude -p` stage, and parse its token/turn/time data.
 
 We use `--output-format stream-json --verbose`: every event goes to a log file (the transcript,
 useful for "why did this run fail?"), and the last event, `type: "result"`, is the same object
-`--output-format json` would print: total_cost_usd, usage, num_turns, duration_ms, subtype, ...
+`--output-format json` would print: usage (tokens), total_cost_usd (an API-price estimate), num_turns, duration_ms, subtype, ...
 """
 import glob
 import json
@@ -116,7 +116,7 @@ class StageSpec:
     log_path: Path
     model: str
     max_turns: int
-    budget_usd: float
+    cap_api_equiv_usd: float
     timeout_s: int
     permission_mode: str
     tools: str
@@ -136,7 +136,7 @@ class StageResult:
     exit_code: int
     subtype: str = None
     is_error: bool = True
-    cost_usd: float = 0.0
+    api_equiv_usd: float = 0.0
     tokens: dict = field(default_factory=lambda: dict(input=0, output=0, cache_read=0, cache_creation=0))
     model_usage: dict = field(default_factory=dict)
     num_turns: int = 0
@@ -164,7 +164,7 @@ def build_command(binary, spec):
            "--output-format", "stream-json", "--verbose",
            "--model", spec.model,
            "--max-turns", str(spec.max_turns),
-           "--max-budget-usd", f"{spec.budget_usd:.2f}",
+           "--max-budget-usd", f"{spec.cap_api_equiv_usd:.2f}",
            "--permission-mode", spec.permission_mode,
            "--permission-prompts", "none",
            "--no-session-persistence",
@@ -269,7 +269,7 @@ def apply_result_event(res, ev):
     usage = ev.get("usage") or {}
     res.subtype = ev.get("subtype")
     res.is_error = bool(ev.get("is_error", res.subtype != "success"))
-    res.cost_usd = float(ev.get("total_cost_usd") or 0.0)
+    res.api_equiv_usd = float(ev.get("total_cost_usd") or 0.0)
     res.tokens = {
         "input": int(usage.get("input_tokens") or 0),
         "output": int(usage.get("output_tokens") or 0),

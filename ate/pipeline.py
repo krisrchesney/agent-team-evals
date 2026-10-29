@@ -23,6 +23,15 @@ RETRYABLE = ("rate_limited", "auth_error", "harness_error")
 _PERSONAL_CANARY = re.compile(r"^\s*\d{4}-\d{2}-\d{2} \d{1,2}:\d{2} CST")
 
 
+def _role_prompt(agents, name):
+    """The role's system prompt from its .claude/agents file (None when the stage has no role)."""
+    if not name:
+        return None
+    if name not in agents:
+        raise KeyError(f"stage names role {name!r} but the config's agents are {sorted(agents)}")
+    return agents[name]["prompt"]
+
+
 def _render(template_name, **values):
     return Template(config.load_prompt(template_name)).safe_substitute(
         {k: ("" if v is None else str(v)) for k, v in values.items()})
@@ -125,7 +134,8 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
                 tools=defaults["tools_read" if read_only else "tools_write"],
                 allowed_tools=defaults["allowed_tools_read" if read_only else "allowed_tools_write"],
                 bare=not subscription, safe_mode=subscription, effort=defaults.get("effort"), env=env,
-                agent=st.get("agent"), agents_file=agents_file if st.get("agent") else None,
+                agent=st.get("agent"), agents_file=agents_file if st.get("agent") and not subscription else None,
+                role_prompt=_role_prompt(agents, st.get("agent")) if subscription else None,
                 json_schema=config.load_schema(st["schema"]) if st.get("schema") else None,
             )
             before = workspace.snapshot_tree(wt_path) if read_only else None
@@ -186,7 +196,10 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
             # A failed write stage or planner ends the run. A failed reviewer does not: there is
             # simply no verdict, so the fix round is skipped and we grade what the builder made.
             if (res.exit_code != 0 or res.subtype is None) and (base == "plan" or not read_only):
-                stopped = "agent_error"
+                # The CLI rejected the command before any model call (0 tokens, 0 turns): a harness problem,
+                # not a verdict on the config, so it is retryable and left out of the statistics.
+                never_ran = res.num_turns == 0 and sum(res.tokens.values()) == 0 and not res.timed_out
+                stopped = "harness_error" if never_ran else "agent_error"
                 rec["error"] = res.error
                 break
 

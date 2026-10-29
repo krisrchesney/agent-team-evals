@@ -154,6 +154,7 @@ class StageSpec:
     effort: str = None
     agent: str = None
     agents_file: Path = None
+    role_prompt: str = None
     json_schema: dict = None
     env: dict = None
 
@@ -208,10 +209,16 @@ def build_command(binary, spec):
         cmd.append("--safe-mode")
     if spec.effort:
         cmd += ["--effort", spec.effort]
-    if spec.agents_file:
-        cmd += ["--agents", str(spec.agents_file)]
-    if spec.agent:
-        cmd += ["--agent", spec.agent]
+    if spec.role_prompt:
+        # --safe-mode hides --agents/--agent roles ("agent not found", seen in the calibration run), so in
+        # safe mode the role's prompt, read from the same configs/*/.claude/agents/<role>.md file, is
+        # appended to the system prompt instead. Same text for every config that uses the role.
+        cmd += ["--append-system-prompt", spec.role_prompt]
+    else:
+        if spec.agents_file:
+            cmd += ["--agents", str(spec.agents_file)]
+        if spec.agent:
+            cmd += ["--agent", spec.agent]
     if spec.json_schema:
         cmd += ["--json-schema", json.dumps(spec.json_schema, separators=(",", ":"))]
     return cmd
@@ -329,6 +336,9 @@ def _redact(cmd):
     out = list(cmd)
     if "--json-schema" in out:
         out[out.index("--json-schema") + 1] = "<schema>"
+    if "--append-system-prompt" in out:
+        i = out.index("--append-system-prompt") + 1
+        out[i] = f"<role prompt, {len(out[i])} chars>"
     return out
 
 

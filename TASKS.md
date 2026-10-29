@@ -60,6 +60,13 @@ what the dry run can't: the clean profile really is clean (`isolation_flags` emp
 is "none", `--agents` + `--agent` work, `structured_output` appears in the stream-json result event,
 and Windows quoting of `--allowedTools` is right.
 Command: `python -m ate run --tasks t01 --configs A --reps 1 --run-cap 0.5 --max-total-api-equiv 0.5 --yes`
+First attempt, sweep 20261029T163857Z (record moved to D:/ate-work/rejected/, transcript in D:/ate-work/sweeps/):
+passed 11/11, 319,672 tokens (80,838 cache-creation, 236,912 cache-read, 1,914 output), 7 turns, 21 s.
+Rejected as data, and found two harness bugs, both fixed since: (1) 4 claude.ai connectors (Gmail, Calendar,
+Atlassian, Docs; 73 tools) were loaded, inflating context; now `ENABLE_CLAUDEAI_MCP_SERVERS=false` and
+`--strict-mcp-config`; (2) the agent had no shell tool ("No such tool available: Bash"), so it could not run
+tests; `PowerShell` is now offered too and a run whose init lists no shell tool stops as `harness_error`.
+Retry needs the user's OK (another run of plan usage).
 Done when:
 - [ ] One real record in results/ with non-zero tokens, `auth: subscription`, empty `leak_suspected` and `isolation_flags`
 - [ ] Usage % before/after recorded next to the run's tokens, turns, time and API-equivalent $ (DESIGN §4)

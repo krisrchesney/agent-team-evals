@@ -182,7 +182,7 @@ class TestSubscriptionSafety(unittest.TestCase):
         env = claude.child_env(defaults, base=base)
         self.assertEqual(env["PATH"], "/bin")
         self.assertEqual(Path(env["CLAUDE_CONFIG_DIR"]), Path("D:/ate-work/claude-config"))
-        leftover = {k for k in env if k not in ("PATH", "CLAUDE_CONFIG_DIR")}
+        leftover = {k for k in env if k not in ("PATH", "CLAUDE_CONFIG_DIR", "ENABLE_CLAUDEAI_MCP_SERVERS")}
         self.assertEqual(leftover, set())
 
     def test_defaults_use_subscription(self):
@@ -238,6 +238,56 @@ class TestSubscriptionSafety(unittest.TestCase):
         self.assertEqual(rec["status"], "rate_limited")
         self.assertEqual(len(rec["stages"]), 1)
         self.assertIn("rate_limited", pipeline.RETRYABLE)
+
+    def test_connectors_and_mcp_are_switched_off(self):
+        env = claude.child_env({"auth": "subscription", "claude_config_dir": "D:/x"}, base={})
+        self.assertEqual(env["ENABLE_CLAUDEAI_MCP_SERVERS"], "false")
+        d = config.load_defaults()
+        self.assertIn("PowerShell", d["tools_write"])
+        self.assertIn("Bash", d["tools_write"])
+
+    def test_strict_mcp_flag_always_present(self):
+        spec = claude.StageSpec(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet",
+                                max_turns=5, cap_api_equiv_usd=1.0, timeout_s=10, permission_mode="acceptEdits",
+                                tools="Read", allowed_tools=["Read"], bare=False)
+        self.assertIn("--strict-mcp-config", claude.build_command("claude", spec))
+
+    def test_builtin_plugins_are_not_flagged_but_mcp_servers_are(self):
+        init = {"type": "system", "subtype": "init", "apiKeySource": "none", "tools": ["Bash", "Read"],
+                "plugins": [{"name": "cc-plugin-x", "path": "builtin"}],
+                "mcp_servers": [{"name": "claude.ai Gmail", "status": "connected"}]}
+        rec = self._run_real_like(init)
+        self.assertEqual(len(rec["isolation_flags"]), 1)
+        self.assertIn("mcp_servers", rec["isolation_flags"][0])
+
+    def test_run_without_a_shell_tool_is_a_harness_error(self):
+        init = {"type": "system", "subtype": "init", "apiKeySource": "none", "tools": ["Read", "Edit"]}
+        rec = self._run_real_like(init)
+        self.assertEqual(rec["status"], "harness_error")
+        self.assertIn("no shell tool", rec["error"])
+
+    def _run_real_like(self, init):
+        """Run the pipeline with the real-run checks on, but a canned CLI (a fake that returns this init)."""
+        defaults = config.load_defaults()
+        task = tasks.load_task(tasks.list_tasks()[0])
+        orig = claude.run_stage
+        def stage(binary, spec, fake=None):
+            spec.log_path.parent.mkdir(parents=True, exist_ok=True)
+            spec.log_path.write_text(json.dumps(init) + "\n" + json.dumps(
+                {"type": "result", "subtype": "success", "is_error": False, "num_turns": 1, "result": "done",
+                 "total_cost_usd": 0.0, "usage": {}}) + "\n", encoding="utf-8")
+            res = claude.StageResult(name=spec.name, agent=spec.agent, exit_code=0)
+            claude.apply_result_event(res, claude.read_result_event(spec.log_path))
+            res.api_key_source = init.get("apiKeySource")
+            return res
+        claude.run_stage = stage
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                return pipeline.run_one(task, config.load_config("A"), 1, defaults=defaults, sweep_id="t",
+                                        work_root=Path(tmp), results_path=Path(tmp) / "r.jsonl", binary="x",
+                                        claude_version="x", harness_sha=None, fake=None)
+        finally:
+            claude.run_stage = orig
 
     def test_personal_claude_md_canary(self):
         rec = self._run_with(lambda spec: [

@@ -161,9 +161,18 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
             if _PERSONAL_CANARY.match(res.result_text or ""):
                 rec["isolation_flags"].append(f"{st['name']}:personal CLAUDE.md rule visible in reply")
             init = claude.scan_log(spec.log_path)["init"] or {}
-            for key in ("plugins", "mcp_servers"):
-                if init.get(key):
-                    rec["isolation_flags"].append(f"{st['name']}:{key} loaded: {init[key]}")
+            extra_plugins = [pl for pl in init.get("plugins") or [] if pl.get("path") != "builtin"]
+            if extra_plugins:
+                rec["isolation_flags"].append(f"{st['name']}:plugins loaded: {extra_plugins}")
+            if init.get("mcp_servers"):
+                rec["isolation_flags"].append(f"{st['name']}:mcp_servers loaded: {init['mcp_servers']}")
+            tools = init.get("tools")
+            if (fake is None and tools is not None and not read_only
+                    and not {"Bash", "PowerShell"} & set(tools)):
+                stopped = "harness_error"
+                rec["error"] = (f"stage {st['name']} had no shell tool (tools: {sorted(tools)}), "
+                                f"so the agent could not run tests")
+                break
             if res.rate_limited:
                 stopped = "rate_limited"
                 rec["error"] = (res.error or res.result_text or "usage limit")[:500]

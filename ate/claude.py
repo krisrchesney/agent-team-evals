@@ -80,6 +80,9 @@ def child_env(defaults, base=None):
         if key.upper().startswith(_SCRUB_PREFIXES) or key.upper() in _SCRUB_EXACT:
             del env[key]
     env["CLAUDE_CONFIG_DIR"] = str(Path(defaults["claude_config_dir"]))
+    # A claude.ai login brings the account's connectors (Gmail, Calendar, Atlassian, Docs). A benchmark
+    # agent must not have them: they add ~70 tool definitions to every request and could touch real data.
+    env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
     return env
 
 
@@ -193,6 +196,7 @@ def build_command(binary, spec):
            "--permission-mode", spec.permission_mode,
            "--permission-prompts", "none",
            "--no-session-persistence",
+           "--strict-mcp-config",
            "--tools", spec.tools,
            "--allowedTools", ",".join(spec.allowed_tools)]
     if spec.bare:

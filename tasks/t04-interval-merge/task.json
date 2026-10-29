@@ -1,0 +1,8 @@
+{
+  "id": "t04-interval-merge",
+  "title": "Find the bugs in busy-interval merging",
+  "category": "bug-hunt",
+  "difficulty": "medium",
+  "language": "python",
+  "test_timeout_s": 60
+}

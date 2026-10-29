@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "subtasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "requirements": {"type": "array", "items": {"type": "string"}},
+          "files": {"type": "array", "items": {"type": "string"}},
+          "instructions": {"type": "string"},
+          "done_when": {"type": "string"}
+        },
+        "required": ["title", "instructions", "done_when"]
+      }
+    },
+    "risks": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["subtasks", "risks"]
+}

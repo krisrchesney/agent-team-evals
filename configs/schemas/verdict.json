@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "verdict": {"type": "string", "enum": ["APPROVE", "CHANGES_NEEDED"]},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "requirement": {"type": "string"},
+          "file": {"type": "string"},
+          "problem": {"type": "string"},
+          "failing_input": {"type": "string"}
+        },
+        "required": ["problem"]
+      }
+    }
+  },
+  "required": ["verdict", "findings"]
+}

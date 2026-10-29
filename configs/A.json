@@ -1,0 +1,9 @@
+{
+  "id": "A",
+  "name": "Single agent",
+  "description": "One headless Claude Code run gets the task prompt and works until it stops.",
+  "agents_dir": null,
+  "stages": [
+    {"name": "solve", "agent": null, "prompt": "solve.md", "mode": "write"}
+  ]
+}

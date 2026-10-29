@@ -37,6 +37,17 @@ class TestConfigs(unittest.TestCase):
         self.assertNotIn("Edit", d["tools_read"])
         self.assertNotIn("Write", d["tools_read"])
 
+    def test_no_role_overrides_the_sweep_model(self):
+        # Policy: Sonnet by default; a pricier model only by explicit, whole-sweep choice (--model).
+        d = config.load_defaults()
+        self.assertEqual(d["model"], "sonnet")
+        for cid in config.list_configs():
+            config.check_agent_models(config.load_agents(config.load_config(cid).get("agents_dir")), d["model"])
+        dev = config.parse_agent_md((REPO_ROOT / ".claude/agents/reviewer.md").read_text(encoding="utf-8"))
+        self.assertIn(dev.get("model"), (None, "inherit", "sonnet"))
+        with self.assertRaises(ValueError):
+            config.check_agent_models({"x": {"model": "opus"}}, "sonnet")
+
     def test_agent_frontmatter_parse(self):
         meta = config.parse_agent_md("---\nname: x\ntools: Read, Grep\n---\nBody here\n")
         self.assertEqual(meta["tools"], ["Read", "Grep"])

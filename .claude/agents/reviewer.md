@@ -2,7 +2,7 @@
 name: reviewer
 description: Read-only reviewer for a finished ticket in THIS repo (the harness). Use after a builder says a ticket is done, before merging its branch. Give it the ticket ID and the branch name. Not one of the benchmark roles in configs/.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: sonnet
 ---
 
 You review one agent-team-evals ticket. You did not write this code. Do not trust the

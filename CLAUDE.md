@@ -27,6 +27,12 @@ Read DESIGN.md before your first ticket. It explains every choice below.
 - Never invent or "fill in" cost, token or pass-rate numbers. Only numbers from results/*.jsonl
   produced by a real sweep go into README or DESIGN, with the sweep id next to them.
 
+## Models
+- Default to Sonnet (`"model": "sonnet"` in configs/defaults.json) for sweeps, roles and dev agents.
+- Agent files (configs/*/.claude/agents/, .claude/agents/) never set a pricier `model:`; omit it or
+  use `inherit`/`sonnet`. A test and a runtime check enforce this for benchmark roles.
+- An Opus comparison is a separate, opt-in sweep (`--model opus`) run only after asking the user.
+
 ## Fairness rules (the reviewer checks these)
 - Configs differ only in team structure. Same model, budget, turn limit, tools and permission mode
   for all of them (configs/defaults.json). The builder and reviewer role files are identical in

@@ -12,10 +12,65 @@ def load_defaults(path=None):
     return json.loads(Path(path or CONFIG_DIR / "defaults.json").read_text(encoding="utf-8"))
 
 
+STAGE_KEYS = {"name", "agent", "prompt", "mode", "schema", "only_if", "foreach",
+              "tools", "allowed_tools", "settings"}  # the last three are optional per-stage overrides
+
+# A per-stage settings file must not be able to change who is billed, which model runs, or how
+# permissions work: those are fixed for every config so only the team structure differs.
+_FORBIDDEN_SETTINGS_KEYS = {"apikeyhelper", "model", "forceloginmethod", "forceloginorguuid", "awsauthrefresh",
+                            "awscredentialexport", "gcpauthrefresh", "forcelogingatewayurl", "allowedproviders",
+                            "disableclaudeaiconnectors", "enabledplugins", "mcpservers"}
+_FORBIDDEN_ENV_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "AWS_", "GOOGLE_", "ENABLE_CLAUDEAI")
+
+
+def settings_path(rel):
+    """Resolve a stage's `settings` value to a file inside configs/ (anything else is an error)."""
+    path = (CONFIG_DIR / rel).resolve()
+    if CONFIG_DIR.resolve() not in path.parents:
+        raise ValueError(f"settings file {rel!r} must be inside configs/")
+    if not path.is_file():
+        raise ValueError(f"settings file {rel!r} does not exist")
+    return path
+
+
+def check_settings_file(path):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: settings must be a JSON object")
+    bad = [k for k in data if k.lower() in _FORBIDDEN_SETTINGS_KEYS]
+    if bad:
+        raise ValueError(f"{path}: settings may not set {bad} (auth, model, plugins and MCP are fixed for all configs)")
+    env = data.get("env") or {}
+    bad_env = [k for k in env if k.upper().startswith(_FORBIDDEN_ENV_PREFIXES)]
+    if bad_env:
+        raise ValueError(f"{path}: settings env may not set {bad_env}")
+    if "bypasspermissions" in json.dumps(data).lower():
+        raise ValueError(f"{path}: settings may not enable bypassPermissions")
+
+
+def validate_stage(stage, config_id="?"):
+    where = f"config {config_id} stage {stage.get('name', '?')!r}"
+    unknown = set(stage) - STAGE_KEYS
+    if unknown:
+        raise ValueError(f"{where}: unknown stage keys {sorted(unknown)}")
+    if "tools" in stage and not (isinstance(stage["tools"], str) and stage["tools"].strip()):
+        raise ValueError(f"{where}: tools must be a non-empty comma-separated string")
+    if "allowed_tools" in stage:
+        at = stage["allowed_tools"]
+        if not (isinstance(at, list) and at and all(isinstance(x, str) and x for x in at)):
+            raise ValueError(f"{where}: allowed_tools must be a non-empty list of strings")
+    if "settings" in stage:
+        if not isinstance(stage["settings"], str):
+            raise ValueError(f"{where}: settings must be a path string")
+        check_settings_file(settings_path(stage["settings"]))
+
+
 def load_config(config_id):
     cfg = json.loads((CONFIG_DIR / f"{config_id}.json").read_text(encoding="utf-8"))
     if cfg["id"] != config_id:
         raise ValueError(f"{config_id}.json has id {cfg['id']!r}")
+    for stage in cfg["stages"]:
+        validate_stage(stage, config_id)
     return cfg
 
 

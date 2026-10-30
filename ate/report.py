@@ -1,7 +1,9 @@
 """Summarise results JSONL into a markdown table (stdlib only; charts are a separate ticket)."""
 import math
+import random
 import statistics
 from collections import defaultdict
+from itertools import combinations
 
 from . import results
 
@@ -67,6 +69,95 @@ def per_task(records):
     return grid
 
 
+# --- paired comparison across configs ---------------------------------------------------------
+# All configs run the same tasks, so the fair comparison is task by task: one number per (task, config),
+# the difference per task, then a bootstrap that resamples TASKS (not runs) so the interval reflects
+# how much the answer depends on which tasks were chosen.
+
+BOOT_SEED = 7
+BOOT_N = 10_000
+
+
+def _runs_by_task_config(records):
+    grid = defaultdict(lambda: defaultdict(list))
+    for r in counted(records):
+        grid[r["task_id"]][r["config_id"]].append(r)
+    return grid
+
+
+def _pass_rate(runs):
+    return sum(r["passed"] for r in runs) / len(runs)
+
+
+def _tokens_per_run(runs):
+    return sum(total_tokens(r) for r in runs) / len(runs)
+
+
+def _tokens_per_pass(runs):
+    k = sum(r["passed"] for r in runs)
+    return sum(total_tokens(r) for r in runs) / k if k else None  # no pass on this task: no value
+
+
+PAIRED_METRICS = {"pass_rate": _pass_rate, "tokens_per_run": _tokens_per_run,
+                  "tokens_per_pass": _tokens_per_pass}
+
+
+def paired_difference(records, config_a, config_b, metric, n_boot=BOOT_N, seed=BOOT_SEED):
+    """Mean over tasks of (metric for config_a minus metric for config_b), with a 95% bootstrap interval.
+
+    Only tasks where both configs have a value count (a task missing a config, or with no pass for
+    tokens_per_pass, is skipped). Returns None when no task qualifies, else a dict with `diff`, `lo`, `hi`
+    and `tasks` (how many tasks were paired)."""
+    fn = PAIRED_METRICS[metric]
+    diffs = []
+    for _tid, by_cfg in sorted(_runs_by_task_config(records).items()):
+        if config_a in by_cfg and config_b in by_cfg:
+            va, vb = fn(by_cfg[config_a]), fn(by_cfg[config_b])
+            if va is not None and vb is not None:
+                diffs.append(va - vb)
+    if not diffs:
+        return None
+    mean = statistics.mean(diffs)
+    rng = random.Random(seed)
+    n = len(diffs)
+    boots = sorted(statistics.mean(rng.choice(diffs) for _ in range(n)) for _ in range(n_boot))
+    lo, hi = boots[int(0.025 * n_boot)], boots[int(0.975 * n_boot) - 1]
+    return {"diff": mean, "lo": lo, "hi": hi, "tasks": n}
+
+
+def paired_pairs(records):
+    """Config pairs to compare, larger-minus-smaller in alphabetical order: B-A, C-A, C-B for A, B, C."""
+    cfgs = sorted({r["config_id"] for r in counted(records)})
+    return [(b, a) for a, b in combinations(cfgs, 2)]
+
+
+def render_paired(records):
+    """Markdown section with the paired comparisons, or '' when fewer than two configs have data."""
+    pairs = paired_pairs(records)
+    if not pairs:
+        return ""
+
+    def cell(res, fmt):
+        if res is None:
+            return "n/a"
+        return f"{fmt(res['diff'])} ({fmt(res['lo'])} to {fmt(res['hi'])})"
+
+    pp = lambda x: f"{x * 100:+.0f} pp"
+    tok = lambda x: f"{x:+,.0f}"
+    lines = ["\nPaired comparison (first config minus second, task by task; "
+             f"95% bootstrap interval resampling tasks, {BOOT_N:,} resamples, seed {BOOT_SEED}):\n",
+             "| pair | tasks | pass rate difference | tokens / run difference | tokens / passed task difference |",
+             "|---|---|---|---|---|"]
+    for b, a in pairs:
+        pr = paired_difference(records, b, a, "pass_rate")
+        tr = paired_difference(records, b, a, "tokens_per_run")
+        tp = paired_difference(records, b, a, "tokens_per_pass")
+        n = pr["tasks"] if pr else 0
+        lines.append(f"| {b} - {a} | {n} | {cell(pr, pp)} | {cell(tr, tok)} | {cell(tp, tok)} |")
+    lines.append("\nA pass-rate interval that includes 0 means the configs cannot be told apart on these tasks.")
+    return "\n".join(lines)
+
+
 def render(records):
     if not records:
         return "no records"
@@ -93,6 +184,9 @@ def render(records):
     for tid in sorted(grid):
         cells = [f"{sum(grid[tid][c])}/{len(grid[tid][c])}" if grid[tid][c] else "-" for c in cfgs]
         out.append(f"| {tid} | " + " | ".join(cells) + " |")
+    paired = render_paired(records)
+    if paired:
+        out.append(paired)
     done = {(r["task_id"], r["config_id"], r["rep"]) for r in counted(records)}
     skipped = len({(r["task_id"], r["config_id"], r["rep"]) for r in records} - done)
     if skipped:

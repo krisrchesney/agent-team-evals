@@ -1,0 +1,8 @@
+{
+  "id": "t18-payroll-hunt",
+  "title": "Fix payroll bugs and add CSV output without changing the text report",
+  "category": "bug-hunt+feature",
+  "difficulty": "very-hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

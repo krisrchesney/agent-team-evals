@@ -1,0 +1,8 @@
+{
+  "id": "t09-ledger",
+  "title": "Make an in-memory ledger atomic, idempotent and hold-aware",
+  "category": "feature",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

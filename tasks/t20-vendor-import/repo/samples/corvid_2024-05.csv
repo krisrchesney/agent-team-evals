@@ -1,0 +1,5 @@
+﻿Rechnung;Pos;Artikel;Bezeichnung;Menge;Einzelpreis;Waehrung;Datum;Faellig;Status
+R-2024-0117;1;CV-10 220;Gehäuse, Aluminium;4;1.234,50;EUR;06.05.2024;05.06.2024;OK
+R-2024-0117;2;CV-10 221;"Deckel; schwarz";4;89,90;;06.05.2024;;OK
+R-2024-0117;3;CV-77 001;Dichtung;20;0,45;;06.05.2024;;STORNO
+R-2024-0118;1;cv-30 5;Montagesatz  komplett;1;12;CHF;21.05.2024;;OK

@@ -1,0 +1,8 @@
+{
+  "id": "t20-vendor-import",
+  "title": "Add a new supplier's invoice export to an import pipeline",
+  "category": "underspecified",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

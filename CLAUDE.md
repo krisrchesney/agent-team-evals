@@ -49,7 +49,9 @@ Read DESIGN.md before your first ticket. It explains every choice below.
 - Harness code (ate/) is Python stdlib only. A plotting script may use matplotlib as a dev-only
   dependency; nothing in ate/ may import it.
 - Tasks: stdlib Python; prompt.md has numbered requirements; every hidden test traces to one;
-  hidden tests are deterministic (inject clocks, seeds) and run in seconds; reference
+  except `"category": "underspecified"` tasks, whose prompt is a short ask and whose hidden tests
+  trace to rules written in the starting repo (docs, config, existing code), mapped in the task's
+  AUDIT.md (outside repo/, never shown to agents); hidden tests are deterministic (inject clocks, seeds) and run in seconds; reference
   solution in solution/; `python -m ate validate --tasks <id>` must say OK.
 - Write tasks from scratch. Don't copy public benchmarks (SWE-bench, HumanEval, LeetCode); their
   solutions are likely in training data.

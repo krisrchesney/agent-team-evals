@@ -1,0 +1,8 @@
+{
+  "id": "t21-statement-bugs",
+  "title": "Fix the causes behind two customer complaints about monthly statements",
+  "category": "underspecified",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

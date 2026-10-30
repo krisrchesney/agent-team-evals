@@ -1,0 +1,4 @@
+invoice,line,sku,desc,qty,unit_price,currency,date,due
+A-1001,1,ab-100,Steel bracket,10,4.50,USD,2024-05-02,2024-06-01
+A-1001,2,AB 200,"Bolt pack, M8",3,"1,250.00",USD,2024-05-02,
+A-1002,1,ZX-9,  Rubber   foot  ,40,0.35,,2024-05-10,

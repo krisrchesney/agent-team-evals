@@ -39,6 +39,13 @@ must **fail** on the starting code (otherwise the task measures nothing) and **p
 reference solution (otherwise the task is impossible or the tests are wrong). A broken task would
 quietly drag every config's score down by the same amount and hide real differences.
 
+**Under-specified tasks (t19+).** A single agent passed every fully specified task, so these give a
+short, realistic ask ("add refunds the way the rest of the service is built") and put the rules in
+the starting repo: a conventions doc, API and error docs, a supplier's own format notes, config
+files, the existing code. Every hidden test still traces to a written rule, just not one in the
+prompt; each task's `AUDIT.md` (outside `repo/`) maps tests to `file` and rule. The bet: an agent
+that does not explore misses rules, and a reviewer told to check conventions catches them.
+
 **Why numbered requirements in the prompt?** Every hidden test traces back to a sentence in the
 prompt. If an agent "fails" a test for behaviour the prompt never asked for, that's a task bug, not
 an agent failure. Numbering also gives the planner and reviewer something concrete to check.

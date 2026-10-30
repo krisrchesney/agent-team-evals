@@ -1,5 +1,6 @@
 """Tests for the harness itself. No API calls: everything uses the dry-run fake CLI."""
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -100,6 +101,25 @@ class TestGrading(unittest.TestCase):
         self.assertFalse(bad["ok"])
         crash = grade.parse_unittest_output("ImportError: boom\n", 1)
         self.assertFalse(crash["ok"])
+
+    def test_same_size_same_mtime_edit_is_not_graded_from_stale_bytecode(self):
+        """A stale .pyc (same source size and mtime) must not hide an edit: t18 failed on Linux CI this way."""
+        import os
+        import py_compile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "tests").mkdir()
+            (root / "tests" / "__init__.py").write_text("")
+            (root / "tests" / "test_v.py").write_text(
+                "import unittest\nimport mod\n\n"
+                "class T(unittest.TestCase):\n    def test_v(self):\n        self.assertEqual(mod.V, 2)\n")
+            src = root / "mod.py"
+            src.write_text("V = 1\n")
+            os.utime(src, (1_700_000_000, 1_700_000_000))
+            py_compile.compile(str(src), cfile=str(root / "__pycache__" / f"mod.{sys.implementation.cache_tag}.pyc"))
+            src.write_text("V = 2\n")  # same size; reset mtime so the stale .pyc still looks current
+            os.utime(src, (1_700_000_000, 1_700_000_000))
+            self.assertTrue(grade.run_unittest(root, "tests", 60)["ok"])
 
     def test_tasks_are_valid(self):
         """Hidden tests must fail on the snapshot and pass on the reference solution."""

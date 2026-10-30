@@ -87,6 +87,11 @@ a hunt for 7 planted bugs). One run of config A on each passed all four on its f
 agent time). So a single Sonnet 5.5 agent has passed all 13 tasks written to be hard. A fully specified task,
 however long, gives a reviewer or planner little to add.
 
+**Third follow-up: a weaker model passed too.** One run of config A with Haiku 5.5 on `t15` to `t18` and `t12`
+(sweep `20261030T044006Z`) passed all five: 3,149,064 tokens, 142 turns, 863 seconds of agent time. On `t15` to `t18`
+Haiku used 3,073,469 tokens against Sonnet's 1,035,437 (about 3x) and still needed no reviewer. With no single-agent
+failures to fix, a team sweep on these tasks would measure only its extra usage.
+
 Caveats: 5 tasks and 3 runs per task and config, one model, teams orchestrated by the harness in a
 fixed order (not by the model), and tasks written for this project. Differences under about 15 points
 of pass rate are not detectable at this size. Token counts are exact; the dollar figure in the raw

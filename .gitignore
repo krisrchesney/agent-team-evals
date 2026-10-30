@@ -8,3 +8,5 @@ results/*-dry*.jsonl
 .claude/worktrees/
 # Sweep wrapper logs
 results/sweep-*.log
+# Private local instructions (Command Center notes), never committed
+CLAUDE.local.md

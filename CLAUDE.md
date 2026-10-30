@@ -60,3 +60,9 @@ Read DESIGN.md before your first ticket. It explains every choice below.
 ## Lessons
 One line per finished ticket: what went wrong or what review caught. Added on main by the
 session that merges.
+- Tasks: name hidden tests `test_r<N>_...` after the numbered requirement they check, so an audit can trace every
+  test to a rule (an untagged regression group like `test_reg_` is fine for "existing behaviour stays").
+- Difficulty: a fully specified task is not a hard task. A single agent passed 13 of 13 tasks with 11-36 numbered
+  requirements, 200-520 lines and 22-134 hidden tests; the only failure ever seen was one tiny formatting rule.
+- Runs: `--safe-mode` hides `--agents`; roles are appended with `--append-system-prompt`. Check a real run's startup
+  event (tools, plugins, MCP servers) before trusting its numbers.

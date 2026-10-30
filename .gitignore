@@ -10,3 +10,5 @@ results/*-dry*.jsonl
 results/sweep-*.log
 # Private local instructions (Command Center notes), never committed
 CLAUDE.local.md
+# Session handoff note: holds local paths and board links, so it stays out of the public repo
+HANDOFF.md

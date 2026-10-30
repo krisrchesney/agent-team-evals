@@ -333,6 +333,9 @@ per run, against the 100k planned. A full 225-run sweep at that rate is about 28
 `20261030T015846Z`, `20261030T020045Z`: 854,488 tokens, 115 turns, 351 s of agent time (about 95k tokens per run).
 t15-t18, sweeps `20261030T023845Z`, `20261030T024137Z`, `20261030T024402Z`: 1,035,437 tokens, 131 turns, 376 s
 (about 259k tokens per run; t17 alone used 410k). Larger tasks cost a single agent more but did not make it fail.
+Haiku 5.5 (`--model haiku`), t15-t18 and t12, sweep `20261030T044006Z`: 5 of 5 passed, 3,149,064 tokens, 142 turns,
+863 s. Per task: t15 754,257, t16 562,097, t17 932,603, t18 824,512, t12 75,595 tokens. That is about 3x Sonnet's tokens
+on t15-t18 (3,073,469 against 1,035,437) in about the same number of turns (132 against 131), so more tokens per turn.
 
 Planning figure used before the pilot (45 runs = 5 tasks × A,B,C × 3 reps): about 100k tokens per run averaged
 over configs, so roughly 4.5M tokens, more if t03 (multi-file) pushes runs up. A full sweep (225 runs) is

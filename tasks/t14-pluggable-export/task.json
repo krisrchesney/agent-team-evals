@@ -1,0 +1,8 @@
+{
+  "id": "t14-pluggable-export",
+  "title": "Refactor a tangled export function into layers with pluggable formats",
+  "category": "refactor",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

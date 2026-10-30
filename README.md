@@ -74,7 +74,7 @@ What the pilot does and does not show:
   is mostly the planning stage itself.
 
 **Follow-up: nine more tasks, still too easy.** To get tasks that could separate the configs, nine larger
-tasks were added (`t06` to `t14`: 22 to 323 lines of reference solution, 6 to 12 numbered requirements, 22 to
+tasks were added (`t06` to `t14`: 117 to 323 lines of reference solution, 6 to 12 numbered requirements, 22 to
 66 hidden tests each). One run of config A on each passed all nine on its first try (854,488 tokens in total,
 115 turns, 351 seconds of agent time), so they do not separate the configs either; the pilot above still
 covers only `t01` to `t05`. The only task any run has ever failed is a long spec with many small formatting

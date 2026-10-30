@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Team Evals</title>
+<meta name="description" content="Do teams of Claude Code agents beat a single agent? Pass rate on hidden tests against token usage, measured on 21 coding tasks.">
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --text: #1d1d1b; --muted: #5f5e58; --line: #e2e0d8;
+  --accent: #2f5d8a; --accent-soft: #e6eef6; --good: #2e7d4f; --warn: #a2621b;
+  --a: #6b7280; --b: #2f5d8a; --c: #8a4f9e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --surface: #1f1f1d; --text: #ecebe6; --muted: #a6a59e; --line: #34332f;
+    --accent: #8fb6dc; --accent-soft: #23303d; --good: #7cc79a; --warn: #e0a560;
+    --a: #a3a9b5; --b: #8fb6dc; --c: #c79ad6;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161615; --surface: #1f1f1d; --text: #ecebe6; --muted: #a6a59e; --line: #34332f;
+  --accent: #8fb6dc; --accent-soft: #23303d; --good: #7cc79a; --warn: #e0a560;
+  --a: #a3a9b5; --b: #8fb6dc; --c: #c79ad6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 48px 16px 80px; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.15; margin: 0 0 12px; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; margin: 56px 0 12px; }
+h3 { font-size: 1.05rem; margin: 0 0 6px; }
+p { margin: 0 0 14px; }
+a { color: var(--accent); }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 680px; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 0; }
+.btn { display: inline-block; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; font-size: .95rem; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.verdict { margin-top: 32px; padding: 20px 22px; border-radius: 12px; background: var(--accent-soft);
+  border-left: 4px solid var(--accent); }
+.verdict p:last-child { margin: 0; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+.card p { color: var(--muted); font-size: .95rem; margin: 0; }
+.tag { display: inline-block; font-weight: 700; font-size: .8rem; padding: 2px 8px; border-radius: 6px;
+  color: var(--bg); margin-bottom: 8px; }
+.tag.a { background: var(--a); } .tag.b { background: var(--b); } .tag.c { background: var(--c); }
+.flow { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; color: var(--text); margin-top: 10px; }
+.stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin: 18px 0; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.stat .n { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: .88rem; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .93rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; }
+.pass { color: var(--good); font-weight: 700; } .fail { color: var(--warn); font-weight: 700; }
+figure { margin: 22px 0; }
+figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+figcaption { color: var(--muted); font-size: .9rem; margin-top: 8px; }
+ul { padding-left: 20px; } li { margin-bottom: 6px; }
+.note { color: var(--muted); font-size: .9rem; }
+.pending { border: 1px dashed var(--line); border-radius: 12px; padding: 16px 18px; color: var(--muted); }
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Do teams of AI agents write better code than one agent?</h1>
+<p class="lede">Agent Team Evals runs Claude Code on coding tasks with hidden tests, alone and in teams,
+and measures two things: how often each setup passes, and how many tokens it uses to get there.</p>
+<div class="links">
+  <a class="btn primary" href="https://github.com/krisrchesney/agent-team-evals">Code and raw results on GitHub</a>
+  <a class="btn" href="https://github.com/krisrchesney/agent-team-evals/blob/master/DESIGN.md">Design notes</a>
+</div>
+
+<div class="verdict">
+  <p><strong>So far: not on clearly specified tasks.</strong> A single agent passed 14 of 15 pilot runs;
+  both teams passed 15 of 15, a difference too small to separate from chance. The teams used
+  1.6x and 2.8x the tokens. A single agent then passed every one of 13 tasks written to be hard,
+  with Sonnet 5.5 and with the smaller Haiku 5.5. The open question is whether teams help when
+  the rules are not handed to the agent, which the newest tasks test.</p>
+</div>
+
+<h2>The three setups</h2>
+<p>Every setup gets the same model, tools, turn limit and budget. Only the team structure differs.</p>
+<div class="grid">
+  <div class="card"><span class="tag a">A</span><h3>Single agent</h3>
+    <p>One agent reads the task, writes the code and runs the visible tests.</p>
+    <div class="flow">solve</div></div>
+  <div class="card"><span class="tag b">B</span><h3>Builder + reviewer</h3>
+    <p>A builder writes the code; a read-only reviewer checks it against the request. If it asks for changes, the builder gets one fix round.</p>
+    <div class="flow">build → review → fix?</div></div>
+  <div class="card"><span class="tag c">C</span><h3>Planner + builders + reviewer</h3>
+    <p>A read-only planner splits the work into subtasks, builders do them in turn, then the same review and fix round as B.</p>
+    <div class="flow">plan → build × n → review → fix?</div></div>
+</div>
+
+<h2>The tasks</h2>
+<p>Each task is a small, made-up codebase plus a request. Agents never see the hidden tests that grade
+the result, and every hidden test traces to a rule the agent could have read. A reference solution
+proves each task is solvable and that its tests fail on the starting code.</p>
+<div class="table-wrap"><table>
+  <tr><th>Tasks</th><th>What they are</th><th class="num">Hidden tests each</th></tr>
+  <tr><td>t01–t05</td><td>Small features, a multi-file CLI, a bug hunt, an ambiguous spec</td><td class="num">10–28</td></tr>
+  <tr><td>t06–t14</td><td>Larger features, stateful logic, bug hunts, a refactor</td><td class="num">22–66</td></tr>
+  <tr><td>t15–t18</td><td>Long specs: 25–36 numbered rules, 400–520 lines of reference solution</td><td class="num">88–134</td></tr>
+  <tr><td>t19–t21</td><td><strong>Under-specified:</strong> a short, realistic request; the rules live in the codebase's own docs, config and code</td><td class="num">20–39</td></tr>
+</table></div>
+
+<h2>Pilot: 45 runs</h2>
+<p>Tasks t01–t05, each config three times, Sonnet 5.5 (sweep <code>20261029T220931Z</code>).</p>
+<div class="table-wrap"><table>
+  <tr><th>Config</th><th class="num">Passed</th><th class="num">Pass rate (95% CI)</th><th class="num">Tokens / run</th><th class="num">vs A</th><th class="num">Turns / run</th><th class="num">Median time</th></tr>
+  <tr><td>A single agent</td><td class="num">14 / 15</td><td class="num">93% (70–99%)</td><td class="num">70,947</td><td class="num">1.00x</td><td class="num">8.7</td><td class="num">20.6 s</td></tr>
+  <tr><td>B builder + reviewer</td><td class="num">15 / 15</td><td class="num">100% (80–100%)</td><td class="num">114,189</td><td class="num">1.61x</td><td class="num">12.5</td><td class="num">36.5 s</td></tr>
+  <tr><td>C planner + builder + reviewer</td><td class="num">15 / 15</td><td class="num">100% (80–100%)</td><td class="num">196,607</td><td class="num">2.77x</td><td class="num">23.3</td><td class="num">60.8 s</td></tr>
+</table></div>
+<figure>
+  <img src="figures/pass_vs_usage.png" alt="Pass rate against tokens per run for configs A, B and C, with overlapping confidence intervals">
+  <figcaption>Pass rate against tokens per run. The intervals overlap almost completely: these tasks separate the setups on usage, not on pass rate.</figcaption>
+</figure>
+<ul>
+  <li><strong>The one failure</strong> was config A printing <code>0</code> instead of <code>0.00</code> for an empty group in t03.</li>
+  <li><strong>The reviewer found real defects.</strong> It asked for changes in 4 of 30 team runs, and each fix round turned into a pass, once on the same <code>0</code> vs <code>0.00</code> bug.</li>
+  <li><strong>The planner mostly wasn't needed.</strong> It chose a single subtask in 12 of 15 runs, so C's extra cost is mostly the planning step.</li>
+</ul>
+<figure>
+  <img src="figures/tokens_by_stage.png" alt="Mean tokens per run by stage for each config">
+  <figcaption>Where the tokens go: planning is the largest extra cost of C; the reviewer costs about 30k tokens per run in both teams.</figcaption>
+</figure>
+
+<h2>Harder tasks: can one agent be made to fail?</h2>
+<p>Before running teams on new tasks, one config-A run per task checks whether there is any room for a team to help.</p>
+<div class="table-wrap"><table>
+  <tr><th>Probe</th><th>Model</th><th class="num">Passed</th><th class="num">Tokens</th><th class="num">Turns</th><th class="num">Agent time</th></tr>
+  <tr><td>t06–t14</td><td>Sonnet 5.5</td><td class="num pass">9 / 9</td><td class="num">854,488</td><td class="num">115</td><td class="num">351 s</td></tr>
+  <tr><td>t15–t18</td><td>Sonnet 5.5</td><td class="num pass">4 / 4</td><td class="num">1,035,437</td><td class="num">131</td><td class="num">376 s</td></tr>
+  <tr><td>t15–t18 + t12</td><td>Haiku 5.5</td><td class="num pass">5 / 5</td><td class="num">3,149,064</td><td class="num">142</td><td class="num">863 s</td></tr>
+</table></div>
+<p class="note">Sweeps: 20261030T015600Z, T015846Z, T020045Z (t06–t14); 20261030T023845Z, T024137Z, T024402Z (t15–t18); 20261030T044006Z (Haiku).
+Haiku used about 3x Sonnet's tokens on the same tasks in about the same number of turns, and still needed no reviewer.</p>
+
+<h2>Under-specified tasks</h2>
+<p>When every rule is written in the prompt, a careful agent can check its own work and a reviewer has
+nothing to add. The newest tasks read like a real request from a colleague instead:</p>
+<div class="grid">
+  <div class="card"><h3>t19 · Refunds</h3><p>"Add refunds to the payments service; the API is in docs/API.md." The ledger entries, audit log, events, idempotency and error codes are only in the service's conventions and docs.</p></div>
+  <div class="card"><h3>t20 · New supplier</h3><p>"Load Corvid's invoice files like the other suppliers." Payment terms, default currency, cancelled lines and error handling live in the importer contract and config.</p></div>
+  <div class="card"><h3>t21 · Statement bugs</h3><p>Two customer complaints, symptoms only. Four root causes in shared code; the statement docs define "correct" for every customer.</p></div>
+</div>
+<div id="underspec-results" class="pending" style="margin-top:14px">Single-agent probe on t19–t21: running now. Results will appear here.</div>
+
+<h2>How it runs</h2>
+<ul>
+  <li>Each run is headless Claude Code in its own git worktree, with a clean profile: no connectors, plugins or memory leak in.</li>
+  <li>The harness, not the model, runs the stages in a fixed order, so the setups differ only in structure.</li>
+  <li>Hidden tests are copied in only after every stage has finished. Results are one JSON line per run, with tokens split into input, cache reads, cache writes and output.</li>
+  <li>Runs use a Claude subscription. Usage is reported in tokens, turns and time; caps exist to stop runaway loops.</li>
+</ul>
+
+<h2>Caveats</h2>
+<ul>
+  <li>Small samples: the pilot is 5 tasks × 3 runs per setup, and differences under about 15 points of pass rate are not detectable at that size.</li>
+  <li>One model family, tasks written for this project, and teams orchestrated in a fixed order rather than by the model.</li>
+  <li>Probes are one run per task: they show whether a single agent can fail, not how often.</li>
+</ul>
+
+<footer>
+  Agent Team Evals · MIT license · by Kristopher Chesney ·
+  <a href="https://github.com/krisrchesney/agent-team-evals">github.com/krisrchesney/agent-team-evals</a>
+</footer>
+</main>
+</body>
+</html>

@@ -16,37 +16,6 @@ Template:
 
 ## Ready (independent: these can run as parallel sessions)
 
-### T-5: Paired comparison in the report
-Status: Ready
-Owns: ate/report.py; tests/test_report.py (new)
-Blocked by: none
-Why: Configs see the same tasks, so comparing them task by task is more powerful than overall rates.
-Done when:
-- [ ] `report` prints, for each pair (B-A, C-A, C-B), the pass-rate difference with a 95% paired bootstrap CI that resamples tasks, not runs (fixed seed)
-- [ ] Also prints tokens per passed task with the same CI method
-- [ ] Unit tests on a hand-made record list with a known answer; stdlib only
-
-### T-6: Chart script for the write-up
-Status: Ready
-Owns: scripts/plot.py (new); docs/figures/ (new)
-Blocked by: none
-Why: DESIGN §5: pass rate vs usage (tokens) frontier, per-task grid, C's tokens by stage.
-Done when:
-- [ ] `python scripts/plot.py results/<sweep>.jsonl` writes 3 PNGs to docs/figures/
-- [ ] matplotlib imported only in this script; a clear message if it isn't installed
-- [ ] Works on the dry-run oracle output; dry-run charts carry a "DRY RUN" watermark
-
-### T-7: Per-stage overrides in the pipeline
-Status: Ready
-Owns: ate/claude.py (StageSpec, build_command); ate/pipeline.py (only the StageSpec construction block in run_one); tests/test_overrides.py (new)
-Blocked by: none
-Why: T-10 (C-auto) needs a stage whose tools include `Agent`, and T-11 (config D) needs a
-per-config `--settings` file. Both are small additions to how a stage's command is built.
-Done when:
-- [ ] A stage in configs/*.json may set `tools`, `allowed_tools` and `settings` (a path under configs/); defaults still apply otherwise
-- [ ] The fairness test still holds: A/B/C produce the same commands as before (assert it)
-- [ ] check.py passes
-
 ## Blocked
 
 ### T-1: Smoke run (user): one task, config A, one rep, on the subscription
@@ -187,3 +156,12 @@ Status: Done. Merged to master 2026-10-29: t04-interval-merge (4/10 -> 10/10).
 
 ### T-4: Task t05: spec with an ambiguity (config file + env overrides)
 Status: Done. Merged to master 2026-10-29: t05-env-config (0/18 -> 18/18).
+
+### T-5: Paired comparison in the report
+Status: Done 2026-10-29, merged to master: paired comparison in the report (bootstrap over tasks).
+
+### T-6: Chart script for the write-up
+Status: Done 2026-10-29, merged to master: scripts/plot.py and the three pilot charts in docs/figures/ (used in the README).
+
+### T-7: Per-stage overrides in the pipeline
+Status: Done 2026-10-29, merged to master: per-stage overrides (tools, allowed_tools, settings) with a golden-command test that A, B and C are unchanged.

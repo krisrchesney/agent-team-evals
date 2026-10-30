@@ -1,4 +1,4 @@
-﻿"""Hidden grader for t09. Test names start with the requirement (R1..R10) they check."""
+"""Hidden grader for t09. Test names start with the requirement (R1..R10) they check."""
 import random
 import unittest
 

@@ -1,4 +1,4 @@
-﻿"""A tiny in-memory ledger."""
+"""A tiny in-memory ledger."""
 
 
 class InsufficientFunds(Exception):

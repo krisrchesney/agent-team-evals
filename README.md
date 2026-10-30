@@ -73,6 +73,13 @@ What the pilot does and does not show:
 - **The planner mostly wasn't needed.** It chose a single subtask in 12 of 15 C runs, so C's extra cost
   is mostly the planning stage itself.
 
+**Follow-up: nine more tasks, still too easy.** To get tasks that could separate the configs, nine larger
+tasks were added (`t06` to `t14`: 22 to 323 lines of reference solution, 6 to 12 numbered requirements, 22 to
+66 hidden tests each). One run of config A on each passed all nine on its first try (854,488 tokens in total,
+115 turns, 351 seconds of agent time), so they do not separate the configs either; the pilot above still
+covers only `t01` to `t05`. The only task any run has ever failed is a long spec with many small formatting
+rules (`t03`), so the next batch leans on volume and precision instead of size alone.
+
 Caveats: 5 tasks and 3 runs per task and config, one model, teams orchestrated by the harness in a
 fixed order (not by the model), and tasks written for this project. Differences under about 15 points
 of pass rate are not detectable at this size. Token counts are exact; the dollar figure in the raw

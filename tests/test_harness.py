@@ -285,6 +285,9 @@ class TestSubscriptionSafety(unittest.TestCase):
                     self.assertIn(f"{len(agents[want]['prompt'])} chars", cmd)
                     self.assertNotIn("--agent ", cmd)
 
+    def test_logged_command_has_no_local_cli_path(self):
+        self.assertEqual(claude._redact([r"C:\Users\someone\AppData\x\claude.exe", "-p"])[0], "claude")
+
     def test_strict_mcp_flag_always_present(self):
         spec = claude.StageSpec(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet",
                                 max_turns=5, cap_api_equiv_usd=1.0, timeout_s=10, permission_mode="acceptEdits",

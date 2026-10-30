@@ -73,6 +73,11 @@ Done when:
 Status: Done 2026-10-29, merged to master: nine tasks written by three sessions, audited (every hidden test
 traces to a numbered requirement) and probed with one run of config A each: 9 of 9 passed, so they do not
 separate the configs. Next: a third, much harder batch (t15+), see the board.
+
+### T-8d: Tasks t15-t18 (third batch, much harder)
+Status: Done 2026-10-29, merged to master from branches ticket/T-9a-tasks, T-9b-tasks, T-9c-tasks (named before
+the T-9 ticket number was taken). 25-36 requirements, 88-134 hidden tests each, audited. Probe: config A passed
+4 of 4 (see DESIGN section 4), so they do not separate the configs either.
 ### T-9: Config A2: equal-compute baseline (best of 2 single agents)
 Status: Blocked
 Owns: configs/A2.json (new); ate/pipeline.py (`run_one` loop only)

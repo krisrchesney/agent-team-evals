@@ -195,6 +195,20 @@ with no route to this repo) is ticket T-9. Until then, check `leak_suspected` be
 Known git 2.16 constraints on this machine: no `git worktree add -q` and no `git worktree remove`.
 The harness deletes the folder, then runs `git worktree prune`.
 
+### Per-stage overrides (for future configs)
+
+A stage in `configs/<id>.json` may set three optional keys; everything not set falls back to
+`configs/defaults.json`: `tools` (a comma string that replaces the tool list), `allowed_tools` (a list that
+replaces the pre-approved tools) and `settings` (a JSON file inside `configs/`, passed as `--settings`).
+This is how a later config can give a lead agent the `Agent` tool, or add a Stop-hook gate to a single
+agent, without touching the code. Guard rails: unknown stage keys are an error, a settings file must live
+inside `configs/` and may not set auth, model, plugins, MCP servers or `bypassPermissions` (or any
+`ANTHROPIC_*`, `CLAUDE_*`, `AWS_*` environment variable), and `--safe-mode`, `--strict-mcp-config` and the
+subscription checks are applied after the overrides, so a stage cannot switch them off. A, B and C use no
+overrides, and `tests/golden_commands.json` (generated before this feature existed) plus a test prove their
+commands are byte-for-byte unchanged. One thing to check when a config first uses `settings`: whether the
+CLI honours `--settings` together with `--safe-mode`.
+
 ---
 
 ## 3. Metrics

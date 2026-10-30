@@ -1,0 +1,8 @@
+{
+  "id": "t08-logpipe",
+  "title": "Structured fields, new filters, a stateful dedupe and stats in a log pipeline",
+  "category": "multi-file",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

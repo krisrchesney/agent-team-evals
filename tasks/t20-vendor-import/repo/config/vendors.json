@@ -1,0 +1,5 @@
+{
+  "acme": {"currency": "USD", "terms_days": 30},
+  "bolt": {"currency": "USD", "terms_days": 14},
+  "corvid": {"currency": "EUR", "terms_days": 45}
+}

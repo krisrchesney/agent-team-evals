@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Do Agent Teams Win?</title>
+<meta name="description" content="Results from Agent Team Evals: a single Claude Code agent against two agent teams on 21 coding tasks with hidden tests.">
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --text: #1d1d1b; --muted: #5f5e58; --line: #e2e0d8; --accent: #2f5d8a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --surface: #1f1f1d; --text: #ecebe6; --muted: #a6a59e; --line: #34332f; --accent: #8fb6dc;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161615; --surface: #1f1f1d; --text: #ecebe6; --muted: #a6a59e; --line: #34332f; --accent: #8fb6dc;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 48px 16px 80px; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; margin: 40px 0 10px; }
+p { margin: 0 0 14px; }
+a { color: var(--accent); }
+.byline { color: var(--muted); font-size: .95rem; margin-bottom: 28px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+td.num, th.num { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+figure { margin: 22px 0; }
+figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+figcaption { color: var(--muted); font-size: .9rem; margin-top: 8px; }
+ul { padding-left: 20px; } li { margin-bottom: 6px; }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Do agent teams beat a single agent?</h1>
+<p class="byline">Kristopher Chesney · October 2026 · <a href="./">Project overview</a> ·
+<a href="https://github.com/krisrchesney/agent-team-evals">Code and raw results</a></p>
+
+<p>Not on anything I tested. Across 21 coding tasks, one Claude Code agent passed the hidden tests as often as a
+team of agents, within the noise of a small sample, and used a fraction of the tokens. The team's extra
+reviewing and planning had almost nothing left to fix.</p>
+
+<h2>The setup</h2>
+
+<p>Each task is a small Python repo, a written request, and a set of hidden tests the agent never sees. A run
+passes only if every hidden test passes. I compared three setups, all on Claude Sonnet 5.5:</p>
+
+<ul>
+  <li><b>A</b>: one headless Claude Code agent.</li>
+  <li><b>B</b>: a builder, then a read-only reviewer, then one round of fixes if the reviewer asks for any.</li>
+  <li><b>C</b>: a planner, then one or more builders, then a reviewer and one fix round.</li>
+</ul>
+
+<p>Every run starts in a fresh git worktree outside the project, through a Claude Code profile that holds only
+a login: no connectors, plugins, memory or personal instructions. The harness records pass or fail, tokens
+(input, output, cache reads and writes, summed over every stage), turns and wall-clock time. Everything ran on
+a Claude Max subscription, so the token counts are what I measure; nothing was billed per token.</p>
+
+<h2>The pilot: 45 runs</h2>
+
+<p>Five tasks, three setups, three runs each (sweep <code>20261029T220931Z</code>):</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Setup</th><th class="num">Passed</th><th class="num">Tokens per run</th><th class="num">Tokens per passed run</th><th class="num">Turns per run</th><th class="num">Median time</th></tr></thead>
+<tbody>
+<tr><td>A single agent</td><td class="num">14 / 15</td><td class="num">70,947</td><td class="num">76,015</td><td class="num">8.7</td><td class="num">20.6 s</td></tr>
+<tr><td>B builder + reviewer</td><td class="num">15 / 15</td><td class="num">114,189</td><td class="num">114,189</td><td class="num">12.5</td><td class="num">36.5 s</td></tr>
+<tr><td>C planner + builder + reviewer</td><td class="num">15 / 15</td><td class="num">196,607</td><td class="num">196,607</td><td class="num">23.3</td><td class="num">60.8 s</td></tr>
+</tbody></table></div>
+
+<p>The single failure was config A on a CSV report task: it printed <code>0</code> where the spec asked for
+<code>0.00</code>. One failure in 15 runs is well inside the noise; the 95% intervals for the three pass rates
+overlap almost completely. The usage gap is large and consistent: B used 1.6 times A's tokens and C used 2.8 times.</p>
+
+<figure>
+  <img src="figures/pass_vs_usage.png" alt="Pass rate against tokens per run for configs A, B and C" width="936">
+  <figcaption>Pass rate against mean tokens per run, with 95% intervals. The configs separate on usage, not on pass rate.</figcaption>
+</figure>
+
+<p>The reviewer did catch real defects. It asked for changes in 4 of the 30 B and C runs, and the fix round
+turned all four into passes; one of them was the same <code>0.00</code> bug that sank A. The planner mostly
+had nothing to plan: in 12 of 15 C runs it produced a single subtask, so C paid for a planning stage and got
+one builder anyway.</p>
+
+<figure>
+  <img src="figures/tokens_by_stage.png" alt="Mean tokens per run by stage for each config" width="936">
+  <figcaption>Where the tokens go: planning is most of C's extra cost, and review costs about 30k tokens per run in B and C.</figcaption>
+</figure>
+
+<h2>Trying to make one agent fail</h2>
+
+<p>A team can only help where a single agent fails, so I kept writing harder tasks and ran config A once on
+each:</p>
+
+<ul>
+  <li><b>Nine larger tasks</b> (t06 to t14): 9 of 9 passed, 854,488 tokens in total.</li>
+  <li><b>Four long specs</b> (t15 to t18), 25 to 36 numbered requirements and 88 to 134 hidden tests each, one
+  of them a hunt for seven planted bugs: 4 of 4 passed, 1,035,437 tokens.</li>
+  <li><b>A weaker model</b>: Claude Haiku 5.5 on t15 to t18 plus t12 passed 5 of 5. On t15 to t18 it used
+  3,073,469 tokens, about three times what Sonnet used, and still needed no reviewer.</li>
+  <li><b>Three under-specified tasks</b> (t19 to t21): a short, realistic request where the rules live in the
+  repo's own conventions doc, config and code. Add a refund operation the way the others are built; import a new
+  supplier's file format; fix two customer complaints with four root causes between them. 3 of 3 passed,
+  318,037 tokens.</li>
+</ul>
+
+<p>Counting the smoke and calibration runs, a single agent has now done 39 real runs. It failed once.</p>
+
+<h2>What this shows, and what it doesn't</h2>
+
+<p>On small repos where the rules are written down somewhere, a single current agent rarely misses, so a
+reviewer and a planner mostly add tokens and time. If you pay per token, config A cost about 76k tokens per
+passed run against B's 114k and C's 197k.</p>
+
+<p>The pilot has five tasks and three runs per cell, so differences under about 15
+points of pass rate are invisible at this size. Every task was written by me for this project and fits in a
+small repo. The teams run in a fixed order set by the harness, not orchestrated by the model. Everything ran on
+one model family. So this data says teams added little on these tasks, and nothing about where they might help.</p>
+
+<h2>What would change the answer</h2>
+
+<p>A team needs failures to fix. The tasks most likely to produce them are ones I haven't built: rules that are
+only implied by existing code, repos far larger than one context window, and requests where the right move is
+to ask a question first. A fair test would also give the single agent the same budget, for example the best
+of two independent attempts, so any team win reflects structure rather than extra compute. If a single agent starts failing on
+tasks like those, the reviewer's 4-for-4 record in the pilot says it is the first thing worth adding back.</p>
+
+<footer>
+  Numbers come from the committed results files and the probe sweeps listed in
+  <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/DESIGN.md">DESIGN.md</a>, section 4.
+  <a href="./">Back to the project overview</a>.
+</footer>
+
+</main>
+</body>
+</html>

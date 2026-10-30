@@ -1,0 +1,19 @@
+name: check
+
+# Same health check the Stop hook runs locally. It makes no API calls and needs no secrets:
+# compile, harness tests, task validation (hidden tests fail on the start code, pass on the reference
+# solution), and a dry-run of the whole pipeline with fake agents.
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run scripts/check.py
+        run: python scripts/check.py

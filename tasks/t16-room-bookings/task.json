@@ -1,0 +1,8 @@
+{
+  "id": "t16-room-bookings",
+  "title": "Recurring bookings, cancellation fees and a waitlist in a room-booking system",
+  "category": "multi-file",
+  "difficulty": "very hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

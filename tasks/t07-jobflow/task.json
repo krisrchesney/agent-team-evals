@@ -1,0 +1,8 @@
+{
+  "id": "t07-jobflow",
+  "title": "Retries, failure policies and job selection in a dependency-ordered job runner",
+  "category": "multi-file",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

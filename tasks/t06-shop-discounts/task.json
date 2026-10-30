@@ -1,0 +1,8 @@
+{
+  "id": "t06-shop-discounts",
+  "title": "Bundle deals and coupons across a shared pricing model",
+  "category": "multi-file",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

@@ -1,0 +1,8 @@
+{
+  "id": "t12-cart-pricing",
+  "title": "Find the bugs in a shopping-cart pricing library",
+  "category": "bug-hunt",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

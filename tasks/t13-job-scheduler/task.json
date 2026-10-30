@@ -1,0 +1,8 @@
+{
+  "id": "t13-job-scheduler",
+  "title": "Find the bugs in a job scheduler with retries and dependencies",
+  "category": "bug-hunt",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

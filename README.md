@@ -114,3 +114,5 @@ A run that hits your usage limit stops the sweep; continue it later with `--resu
 
 Python 3.12, standard library only. Worktrees and transcripts go to `D:/ate-work`
 (`work_root` in configs/defaults.json).
+
+License: [MIT](LICENSE).

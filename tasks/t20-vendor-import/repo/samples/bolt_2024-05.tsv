@@ -1,0 +1,4 @@
+﻿InvoiceNo	LineNo	Part	Text	Qty	PriceCents	InvDate	DueDate	State
+B77	1	P-1	Hinge	5	1299	05/03/2024		open
+B77	2	P-2	Latch	2	850	05/03/2024	05/31/2024	paid
+B78	1	P-9	Spring	1	99	05/20/2024		cancelled

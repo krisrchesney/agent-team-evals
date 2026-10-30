@@ -1,0 +1,8 @@
+{
+  "id": "t17-pkg-planner",
+  "title": "Extend a package install planner: versions, policies, exact report and lock output",
+  "category": "feature",
+  "difficulty": "very-hard",
+  "language": "python",
+  "test_timeout_s": 120
+}

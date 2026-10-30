@@ -69,14 +69,10 @@ Done when:
 - [x] `python -m ate report` table committed to README with the sweep id; usage per config in DESIGN section 4
 - [x] Caveats written: 5 tasks, 3 reps, one model, wide intervals
 
-### T-8: Tasks t06-t15 (second batch)
-Status: Blocked
-Owns: tasks/t06-*/ ... tasks/t15-*/ (split into 2-3 tickets by the planner when unblocked)
-Blocked by: T-16 (calibrate difficulty: if A passes everything, the tasks are too easy to separate configs)
-Why: 5 tasks can't separate configs. DESIGN §3 needs 20-30.
-Done when:
-- [ ] Mix per DESIGN §1 categories; each passes `validate`
-
+### T-8: Tasks t06-t14 (second batch)
+Status: Done 2026-10-29, merged to master: nine tasks written by three sessions, audited (every hidden test
+traces to a numbered requirement) and probed with one run of config A each: 9 of 9 passed, so they do not
+separate the configs. Next: a third, much harder batch (t15+), see the board.
 ### T-9: Config A2: equal-compute baseline (best of 2 single agents)
 Status: Blocked
 Owns: configs/A2.json (new); ate/pipeline.py (`run_one` loop only)

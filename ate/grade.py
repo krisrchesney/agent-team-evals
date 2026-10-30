@@ -14,8 +14,15 @@ _RAN = re.compile(r"^Ran (\d+) tests? in", re.M)
 _FAILED = re.compile(r"^FAILED \((.*)\)", re.M)
 
 
+def clear_bytecode(root):
+    """Drop cached .pyc files: a same-size edit within the same second would otherwise run stale code."""
+    for cache in Path(root).rglob("__pycache__"):
+        shutil.rmtree(cache, ignore_errors=True)
+
+
 def run_unittest(cwd, start_dir, timeout_s):
-    cmd = [sys.executable, "-m", "unittest", "discover", "-s", start_dir, "-t", "."]
+    clear_bytecode(cwd)
+    cmd = [sys.executable, "-B", "-m", "unittest", "discover", "-s", start_dir, "-t", "."]
     try:
         proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8",
                               errors="replace", timeout=timeout_s)

@@ -93,8 +93,7 @@ Haiku used 3,073,469 tokens against Sonnet's 1,035,437 (about 3x) and still need
 failures to fix, a team sweep on these tasks would measure only its extra usage.
 
 **Fourth follow-up: under-specified tasks, also passed.** `t19` to `t21` give a short, realistic request and
-leave the rules in the starting repo's own docs, config and code (on branch `ticket/T-17-underspec-tasks` until
-merged). One Sonnet 5.5 run of config A on each (sweep `20261030T165840Z`) passed all three: 318,037 tokens,
+leave the rules in the starting repo's own docs, config and code. One Sonnet 5.5 run of config A on each (sweep `20261030T165840Z`) passed all three: 318,037 tokens,
 36 turns, 112 seconds of agent time. Rules written anywhere in a small repo are found. An overview page with
 all results is at https://krisrchesney.github.io/agent-team-evals/.
 

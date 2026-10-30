@@ -1,0 +1,8 @@
+{
+  "id": "t19-refunds",
+  "title": "Add refunds to a payments core, following the codebase's own conventions",
+  "category": "underspecified",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

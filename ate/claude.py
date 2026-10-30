@@ -332,8 +332,10 @@ def apply_result_event(res, ev):
 
 
 def _redact(cmd):
-    """Keep the logged argv readable: drop the (long) JSON schema body."""
+    """Keep the logged argv readable and free of local paths: drop the (long) JSON schema body and
+    log the CLI as plain `claude` instead of its full install path (which contains the user name)."""
     out = list(cmd)
+    out[0] = "claude"
     if "--json-schema" in out:
         out[out.index("--json-schema") + 1] = "<schema>"
     if "--append-system-prompt" in out:

@@ -80,11 +80,12 @@ the T-9 ticket number was taken). 25-36 requirements, 88-134 hidden tests each, 
 4 of 4 (see DESIGN section 4), so they do not separate the configs either.
 
 ### T-17: Under-specified tasks t19-t21
-Status: Review (ticket/T-17-underspec-tasks). Short prompts; rules live in the starting repo, mapped per test
-in each task's AUDIT.md. t19-refunds (add an operation following conventions, 39 hidden tests),
-t20-vendor-import (new supplier format plus importer contract and config, 24), t21-statement-bugs (two
-customer complaints, four root causes, 20). All validate; each t21 cause is caught on its own.
-Next: one config-A probe run per task (needs the user's go).
+Status: Done 2026-10-30, merged to master from ticket/T-17-underspec-tasks. Short prompts; rules live in the
+starting repo, mapped per test in each task's AUDIT.md. t19-refunds (add an operation following conventions, 39
+hidden tests), t20-vendor-import (new supplier format plus importer contract and config, 24), t21-statement-bugs
+(two customer complaints, four root causes, 20). All validate; each t21 cause is caught on its own. Probe: config
+A passed 3 of 3 (sweep 20261030T165840Z). Project stopped here by the user's choice; no more runs planned.
+
 ### T-9: Config A2: equal-compute baseline (best of 2 single agents)
 Status: Blocked
 Owns: configs/A2.json (new); ate/pipeline.py (`run_one` loop only)

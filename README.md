@@ -78,7 +78,14 @@ tasks were added (`t06` to `t14`: 117 to 323 lines of reference solution, 6 to 1
 66 hidden tests each). One run of config A on each passed all nine on its first try (854,488 tokens in total,
 115 turns, 351 seconds of agent time), so they do not separate the configs either; the pilot above still
 covers only `t01` to `t05`. The only task any run has ever failed is a long spec with many small formatting
-rules (`t03`), so the next batch leans on volume and precision instead of size alone.
+rules (`t03`), so the next batch leaned on volume and precision instead of size alone.
+
+**Second follow-up: four much harder tasks, also passed.** `t15` to `t18` have 25 to 36 numbered requirements,
+400 to 520 lines of reference solution and 88 to 134 hidden tests each, with many exact output rules (one is
+a hunt for 7 planted bugs). One run of config A on each passed all four on its first try (sweeps
+`20261030T023845Z`, `20261030T024137Z`, `20261030T024402Z`: 1,035,437 tokens in total, 131 turns, 376 seconds of
+agent time). So a single Sonnet 5.5 agent has passed all 13 tasks written to be hard. A fully specified task,
+however long, gives a reviewer or planner little to add.
 
 Caveats: 5 tasks and 3 runs per task and config, one model, teams orchestrated by the harness in a
 fixed order (not by the model), and tasks written for this project. Differences under about 15 points

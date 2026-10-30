@@ -329,6 +329,11 @@ a little above the calibration ratios (1.64x and 2.00x for C), because t03 is mu
 API-equivalent dollars; no run came near either. Averaged over configs the pilot used about 127k tokens
 per run, against the 100k planned. A full 225-run sweep at that rate is about 28.6M tokens.
 
+**Difficulty probes** (config A, one run per task, Sonnet 5.5, all passed): t06-t14, sweeps `20261030T015600Z`,
+`20261030T015846Z`, `20261030T020045Z`: 854,488 tokens, 115 turns, 351 s of agent time (about 95k tokens per run).
+t15-t18, sweeps `20261030T023845Z`, `20261030T024137Z`, `20261030T024402Z`: 1,035,437 tokens, 131 turns, 376 s
+(about 259k tokens per run; t17 alone used 410k). Larger tasks cost a single agent more but did not make it fail.
+
 Planning figure used before the pilot (45 runs = 5 tasks × A,B,C × 3 reps): about 100k tokens per run averaged
 over configs, so roughly 4.5M tokens, more if t03 (multi-file) pushes runs up. A full sweep (225 runs) is
 about 23M. The plan's bars can't resolve a 100k-token run, so after each chunk of a sweep the bar is a

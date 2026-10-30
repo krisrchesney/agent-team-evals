@@ -82,8 +82,8 @@ and measures two things: how often each setup passes, and how many tokens it use
   <p><strong>So far: not on clearly specified tasks.</strong> A single agent passed 14 of 15 pilot runs;
   both teams passed 15 of 15, a difference too small to separate from chance. The teams used
   1.6x and 2.8x the tokens. A single agent then passed every one of 13 tasks written to be hard,
-  with Sonnet 5.5 and with the smaller Haiku 5.5. The open question is whether teams help when
-  the rules are not handed to the agent, which the newest tasks test.</p>
+  with Sonnet 5.5 and with the smaller Haiku 5.5, and all three tasks whose rules were left out of the
+  request and had to be found in the codebase. In 39 single-agent runs so far, it has failed once.</p>
 </div>
 
 <h2>The three setups</h2>
@@ -153,7 +153,17 @@ nothing to add. The newest tasks read like a real request from a colleague inste
   <div class="card"><h3>t20 · New supplier</h3><p>"Load Corvid's invoice files like the other suppliers." Payment terms, default currency, cancelled lines and error handling live in the importer contract and config.</p></div>
   <div class="card"><h3>t21 · Statement bugs</h3><p>Two customer complaints, symptoms only. Four root causes in shared code; the statement docs define "correct" for every customer.</p></div>
 </div>
-<div id="underspec-results" class="pending" style="margin-top:14px">Single-agent probe on t19–t21: running now. Results will appear here.</div>
+<p style="margin-top:18px">One config-A run per task, Sonnet 5.5 (sweep <code>20261030T165840Z</code>):</p>
+<div class="table-wrap"><table>
+  <tr><th>Task</th><th class="num">Hidden tests</th><th class="num">Tokens</th><th class="num">Turns</th><th class="num">Agent time</th></tr>
+  <tr><td>t19 refunds</td><td class="num pass">39 / 39</td><td class="num">128,561</td><td class="num">13</td><td class="num">47 s</td></tr>
+  <tr><td>t20 new supplier</td><td class="num pass">24 / 24</td><td class="num">90,160</td><td class="num">9</td><td class="num">29 s</td></tr>
+  <tr><td>t21 statement bugs</td><td class="num pass">20 / 20</td><td class="num">99,316</td><td class="num">14</td><td class="num">36 s</td></tr>
+</table></div>
+<p style="margin-top:14px">A single agent passed all three on its first try. It read the conventions, contracts and
+docs on its own, and these runs were cheaper than the long-spec tasks. Rules that are written down
+somewhere in a small repo are not hidden enough: the next test needs rules that are only implied by the
+code, a much larger codebase, or a request where the agent has to ask.</p>
 
 <h2>How it runs</h2>
 <ul>

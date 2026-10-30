@@ -29,6 +29,34 @@ Tokens count input, output and cache reads and writes, summed over every stage. 
 5,726,145 tokens, 667 turns and 35 minutes of agent time. Passes per task (of 3 runs each): every cell is
 3/3 except config A on `t03-csv-report`, 2/3.
 
+![Pass rate against tokens per run for configs A, B and C](docs/figures/pass_vs_usage.png)
+
+*Pass rate against mean tokens per run, one point per config (bars: 95% Wilson interval, 15 runs each).
+The intervals overlap almost completely: on these tasks the data cannot separate the configs on pass rate,
+only on usage.*
+
+![Passes per task and config](docs/figures/per_task_grid.png)
+
+*Passed runs out of three, per task and config. Only one cell is not 3/3: config A on the multi-file
+`t03-csv-report`.*
+
+![Mean tokens per run by stage](docs/figures/tokens_by_stage.png)
+
+*Where the tokens go. Planning (55k tokens per run) is the largest extra cost of config C; the reviewer
+costs about 30k tokens per run in both B and C.*
+
+Compared task by task (5 tasks; the interval comes from resampling tasks, so with so few it is crude;
+`python -m ate report` prints it):
+
+| pair | pass rate difference | tokens per run difference |
+|---|---|---|
+| B vs A | +7 points (interval +0 to +20, so it touches zero) | +43,241 (+35,087 to +51,301) |
+| C vs A | +7 points (interval +0 to +20, so it touches zero) | +125,660 (+92,156 to +188,947) |
+| C vs B | 0 points (0 to 0) | +82,419 (+45,990 to +143,515) |
+
+The +7 points for both teams comes from a single run: config A's one failure. The usage differences are
+large and clear; the pass-rate differences are not.
+
 What the pilot does and does not show:
 
 - **No evidence yet that a team passes more often.** The only failure in 45 runs was config A on t03,

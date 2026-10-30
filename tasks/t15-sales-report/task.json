@@ -1,0 +1,8 @@
+{
+  "id": "t15-sales-report",
+  "title": "Grouping, refunds, top-N and exact formatting in a sales report pipeline",
+  "category": "multi-file",
+  "difficulty": "very hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

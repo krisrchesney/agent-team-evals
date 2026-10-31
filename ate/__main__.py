@@ -16,7 +16,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import REPO_ROOT, claude, config, grade, pipeline, report, results, tasks
+from . import REPO_ROOT, askuser, claude, config, grade, pipeline, report, results, tasks
 
 
 def _harness_sha():
@@ -40,6 +40,13 @@ def cmd_validate(args):
     bad = 0
     for tid in tasks.resolve(args.tasks):
         task = tasks.load_task(tid)
+        if task.ask_user:
+            try:
+                askuser.load_answers(task.answers)
+            except (OSError, ValueError) as exc:
+                bad += 1
+                print(f"BAD {tid}: ask_user is on but the answer sheet is unusable: {exc}")
+                continue
         with tempfile.TemporaryDirectory() as tmp:
             snap = Path(tmp) / "snap"
             shutil.copytree(task.repo, snap)
@@ -172,7 +179,7 @@ def cmd_run(args):
                 elif rec["status"] == "auth_error":
                     halt = "a stage did not use the subscription login"
                 elif rec.get("isolation_flags") and not args.dry_run:
-                    halt = "personal Claude setup leaked into a run"
+                    halt = "isolation check failed (personal setup leaked, or the ask_user server did not load)"
     if halt:
         print(f"stopped: {halt}. Continue later with the same flags plus: --resume {sweep_id}")
     print(f"results: {results_path}")

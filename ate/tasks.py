@@ -32,6 +32,16 @@ class Task:
         return self.root / "solution"
 
     @property
+    def ask_user(self):
+        """True when the stand-in user tool is on for this task (task.json "ask_user": true)."""
+        return bool(self.meta.get("ask_user"))
+
+    @property
+    def answers(self):
+        """The hidden answer sheet, next to repo/ (never copied into a worktree)."""
+        return self.root / "answers.json"
+
+    @property
     def test_timeout_s(self):
         return int(self.meta.get("test_timeout_s", 120))
 

@@ -158,6 +158,7 @@ class StageSpec:
     settings_file: Path = None
     json_schema: dict = None
     env: dict = None
+    mcp_config: Path = None  # the ask_user server (T-23); --strict-mcp-config keeps every other server out
 
 
 @dataclass
@@ -202,6 +203,8 @@ def build_command(binary, spec):
            "--strict-mcp-config",
            "--tools", spec.tools,
            "--allowedTools", ",".join(spec.allowed_tools)]
+    if spec.mcp_config:
+        cmd += ["--mcp-config", str(spec.mcp_config)]
     if spec.bare:
         cmd.append("--bare")
     if spec.settings_file:
@@ -341,6 +344,8 @@ def _redact(cmd):
     out[0] = "claude"
     if "--json-schema" in out:
         out[out.index("--json-schema") + 1] = "<schema>"
+    if "--mcp-config" in out:
+        out[out.index("--mcp-config") + 1] = "<mcp config>"
     if "--append-system-prompt" in out:
         i = out.index("--append-system-prompt") + 1
         out[i] = f"<role prompt, {len(out[i])} chars>"

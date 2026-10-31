@@ -1,0 +1,9 @@
+{
+  "id": "askuser-fixture",
+  "title": "Test fixture for the ask_user tool (not a benchmark task)",
+  "category": "clarify-first",
+  "difficulty": "easy",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

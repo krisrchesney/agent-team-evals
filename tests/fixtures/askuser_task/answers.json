@@ -1,0 +1,7 @@
+{
+  "default": "No preference; use your judgment.",
+  "answers": [
+    {"id": "greeting", "keywords": ["greeting", "hello", "salutation"], "answer": "Say \"Hello, <name>!\"."},
+    {"id": "language", "keywords": ["language", "locale", "translate"], "answer": "English only."}
+  ]
+}

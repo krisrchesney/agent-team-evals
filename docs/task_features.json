@@ -334,5 +334,21 @@
   "solution_new_files": 0,
   "solution_py_lines": 59,
   "hidden_tests": 20
+ },
+ {
+  "id": "t22-stock-holds",
+  "category": "implied-by-code",
+  "difficulty": "hard",
+  "prompt_words": 134,
+  "prompt_requirements": 0,
+  "repo_py_files": 16,
+  "repo_py_lines": 283,
+  "repo_doc_files": 0,
+  "repo_doc_words": 0,
+  "repo_config_files": 0,
+  "solution_files": 7,
+  "solution_new_files": 1,
+  "solution_py_lines": 223,
+  "hidden_tests": 31
  }
 ]

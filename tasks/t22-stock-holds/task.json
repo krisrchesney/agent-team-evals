@@ -1,0 +1,8 @@
+{
+  "id": "t22-stock-holds",
+  "title": "Add stock holds to an inventory service whose conventions live only in its code",
+  "category": "implied-by-code",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

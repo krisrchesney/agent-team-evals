@@ -254,7 +254,8 @@ def _run_stages(task, cfg, rec, wt_path, run_dir, tag, *, defaults, budget, subs
             rec["isolation_flags"].append(f"{st['name']}:plugins loaded: {extra_plugins}")
         if mcp_config:
             if fake is None:  # the dry run's fake startup event lists no servers
-                rec["isolation_flags"] += [f"{st['name']}:{p}" for p in askuser.isolation_problems(init.get("mcp_servers"))]
+                rec["isolation_flags"] += [f"{st['name']}:{p}" for p in askuser.isolation_problems(
+                    init.get("mcp_servers"), init.get("skills"), init.get("slash_commands"))]
         elif init.get("mcp_servers"):
             rec["isolation_flags"].append(f"{st['name']}:mcp_servers loaded: {init['mcp_servers']}")
         tools = init.get("tools")

@@ -209,7 +209,13 @@ def build_command(binary, spec):
         cmd.append("--bare")
     if spec.settings_file:
         cmd += ["--settings", str(spec.settings_file)]
-    if spec.safe_mode:
+    if spec.safe_mode and spec.mcp_config:
+        # ask_user tasks (T-23): --safe-mode also drops --mcp-config (probed on the real CLI: mcp_servers [] and
+        # no ask_user tool), so it is off for these runs. The same isolation comes from loading no settings
+        # sources (no hooks, no user/project MCP or plugins) and no skills or slash commands; the harness
+        # then checks the startup event (pipeline.py, askuser.isolation_problems).
+        cmd += ["--setting-sources", "", "--disable-slash-commands"]
+    elif spec.safe_mode:
         # Subscription runs: no plugins/skills synced from the claude.ai account, no hooks, no MCP,
         # no auto-memory (which could carry notes from one run into the next). Built-in tools stay.
         cmd.append("--safe-mode")

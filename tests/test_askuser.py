@@ -178,6 +178,12 @@ class TestIsolationCheck(unittest.TestCase):
         self.assertEqual(len(askuser.isolation_problems([])), 1)
         self.assertEqual(len(askuser.isolation_problems(None)), 1)
 
+    def test_skills_and_slash_commands_are_flagged(self):
+        ok = [{"name": "ask_user", "status": "connected"}]
+        self.assertEqual(askuser.isolation_problems(ok, [], []), [])
+        self.assertEqual(len(askuser.isolation_problems(ok, ["deploy"], [])), 1)
+        self.assertEqual(len(askuser.isolation_problems(ok, ["x"], ["/init"])), 2)
+
 
 def _spec(**kw):
     base = dict(name="s", prompt="p", cwd=Path("."), log_path=Path("x"), model="sonnet", max_turns=5,
@@ -192,6 +198,18 @@ class TestCommand(unittest.TestCase):
         cmd = claude.build_command("claude", _spec(mcp_config=Path("m.json"), safe_mode=True))
         self.assertIn("--strict-mcp-config", cmd)
         self.assertEqual(cmd[cmd.index("--mcp-config") + 1], "m.json")
+
+    def test_ask_user_runs_drop_safe_mode_for_empty_setting_sources_and_no_slash_commands(self):
+        cmd = claude.build_command("claude", _spec(mcp_config=Path("m.json"), safe_mode=True))
+        self.assertNotIn("--safe-mode", cmd)
+        self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "")
+        self.assertIn("--disable-slash-commands", cmd)
+
+    def test_normal_subscription_runs_keep_safe_mode(self):
+        cmd = claude.build_command("claude", _spec(safe_mode=True))
+        self.assertIn("--safe-mode", cmd)
+        self.assertNotIn("--setting-sources", cmd)
+        self.assertNotIn("--disable-slash-commands", cmd)
 
     def test_without_the_option_the_command_has_no_mcp_config(self):
         self.assertNotIn("--mcp-config", claude.build_command("claude", _spec()))

@@ -1,0 +1,10 @@
+{
+  "id": "A2",
+  "name": "Best of 2 single agents",
+  "description": "Equal-compute baseline: up to two independent single-agent attempts, each in a fresh worktree. The first attempt whose visible tests pass is graded; otherwise the second. Usage is summed over both.",
+  "agents_dir": null,
+  "best_of": 2,
+  "stages": [
+    {"name": "solve", "agent": null, "prompt": "solve.md", "mode": "write"}
+  ]
+}

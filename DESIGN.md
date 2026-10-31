@@ -257,11 +257,11 @@ The same prompt gives different results run to run, so one run per task is an an
 
 ### The confound to address: more compute vs. better structure
 
-B and C use more tokens than A. If they win, is it the team, or just more attempts? Ticket T-8
-adds config **A2**: two independent single-agent attempts, keeping the first whose *visible* tests
-pass, at roughly B's token usage. If B beats A2 at equal usage, the structure is doing the work. Another
-cheap ablation is **D = A + Stop-hook test gate** (T-13): the Boxwatch hook pattern, with no second
-agent.
+B and C use more tokens than A. If they win, is it the team, or just more attempts? Config **A2**
+(built in phase 0, section 5b) makes two independent single-agent attempts, keeping the first whose
+*visible* tests pass, at roughly B's token usage. If B beats A2 at equal usage, the structure is doing
+the work. Another cheap ablation is **D = A + a harness-run test gate** with one fix round and no second
+agent (a Stop hook would be the natural way, but `--safe-mode` disables hooks).
 
 ---
 
@@ -380,6 +380,86 @@ The chart script is ticket T-7 (matplotlib, dev-only dependency).
 
 ---
 
+## 5b. Phase 2 study: when does a team pay for itself?
+
+The first study (sections 1-5) answered "does a team beat one agent on these tasks?" with "not
+measurably": one Sonnet 5.5 agent failed once in 39 runs, so a reviewer or planner had almost nothing
+to fix. The second study asks the useful version: **for which kinds of task is each setup the cheapest
+way to a reliable pass?** The deliverable is a map from task difficulty to the setup with the fewest
+tokens per passed run. Claude models only (Haiku 5.5, Sonnet 5.5, Opus 5.5), on the user's Max 5x
+subscription. Opus runs need the user's OK each time.
+
+### Setups compared
+
+| Config | What it adds over A | Question it answers |
+|---|---|---|
+| A | (one agent) | baseline |
+| AS | a fresh second run of the same agent that re-checks the work | is it the second look, or a separate reviewer role? |
+| D | the harness runs the visible tests; one fix round if they fail | is a mechanical test gate enough? |
+| A2 | best of 2 independent attempts (first whose visible tests pass) | equal-compute baseline: more tries, no structure |
+| B | read-only reviewer, one fix round | the cheapest real team |
+| C | planner and up to 3 builders, then B's review | does decomposition pay on large tasks? |
+| B-hs | B with a Haiku builder and a Sonnet reviewer | can a cheap builder plus a stronger reviewer replace a stronger agent? |
+| B-so | B with a Sonnet builder and an Opus reviewer | does a stronger reviewer catch more? |
+
+Plus A with `--model haiku` and `--model opus` (whole-run model). D uses a harness stage
+(`"run": "visible_tests"`), not a Stop hook, because `--safe-mode` turns hooks off. `best_of` and the
+per-stage `model` key are config fields (section 2, per-stage overrides); A, B and C are unchanged.
+
+### Tasks: where single agents fail
+
+A team can only help where one agent fails, so Phase 1 builds candidates of the kinds the first
+study did not cover, then screens them:
+
+1. **Rules only implied by code**: no doc says it; three existing modules all do it one way.
+2. **Large repos**: thousands of lines, so the agent must search instead of reading everything.
+3. **Cross-module changes**: one request that touches 8+ files with shared invariants.
+4. **Clarify-first requests**: the request is genuinely ambiguous. A scripted stand-in user answers
+   questions from a hidden answer sheet (needs a small local MCP tool; ticket T-23), so "asked the
+   right question" becomes measurable.
+5. **Long multi-step features**: several dependent steps where an early mistake breaks later ones.
+
+`scripts/task_features.py` measures every task (prompt words, numbered requirements, repo lines, doc
+words, solution files and lines, hidden tests) into `docs/task_features.json`, so results can be
+charted against task shape instead of a hand-picked "difficulty" label.
+
+**Screening (go/no-go).** Config A, Sonnet, 2 runs per candidate. Keep tasks A passes some of the time
+but not always, plus a few easy anchors. If no candidate makes A fail, that is the answer ("on tasks we
+can build, a single agent is enough") and the study stops there.
+
+### Sample size
+
+`python scripts/power.py` simulates the paired, task-level analysis the report uses. With per-task
+single-agent pass chances between 30% and 80% (seed 1, 400 sweeps each):
+
+| tasks x runs | runs per config | power for a 15-point gap | 20-point gap | 30-point gap |
+|---|---|---|---|---|
+| 10 x 5 | 50 | 44% | 66% | 93% |
+| 20 x 3 | 60 | 46% | 74% | 96% |
+| 20 x 5 | 100 | 66% | 88% | 100% |
+| 30 x 5 | 150 | 84% | 98% | 100% |
+
+So the main sweep needs about **20 screened tasks x 5 runs** for a 20-point gap; a 10-point gap is out
+of reach at this budget, and the write-up must say so.
+
+### Phases and usage
+
+Usage figures are guesses until screening measures them. On the hard tasks so far one Sonnet agent
+used 100k-410k tokens per run, and teams used 1.6-2.8x A in the pilot.
+
+| Phase | Runs | Rough tokens | Needs |
+|---|---|---|---|
+| 0. Build (configs, features, power, simulated user) | dry runs only | none | done or code only |
+| 1. Screen candidates | ~40 (20 tasks x A x 2) | 5-15M | user's go |
+| 2. Main sweep, Sonnet | 20 tasks x 5 runs x A, AS, D, A2, B (+ C on the large-repo tasks) | 100-200M, over several usage windows | user's go per batch |
+| 3. Model matrix | a 10-task subset x A-haiku, A-opus, B-hs, B-so x 3 | 20-60M; Opus uses limits faster | user's go, Opus OK |
+| 4. Write-up | none | none | |
+
+Every real run still needs `--max-total-api-equiv` and `--yes`; `scripts/run_sweep.ps1` waits out usage
+limits and resumes.
+
+---
+
 ## 6. Layout
 
 ```
@@ -393,7 +473,8 @@ ate/                 the runner (stdlib only): python -m ate {list,validate,run,
   report.py          markdown summary with Wilson intervals
 configs/
   defaults.json      model, runaway-loop caps, tools: shared by all configs
-  A.json B.json C.json   stage lists
+  A.json B.json C.json   stage lists (study 1)
+  A2 AS D B-hs B-so .json  phase 2 setups (section 5b)
   B/.claude/agents/  builder.md reviewer.md
   C/.claude/agents/  planner.md builder.md reviewer.md
   prompts/           stage prompt templates ($task_prompt, $findings, ...)
@@ -402,4 +483,6 @@ tasks/               t01-slugify, t02-ttl-cache (+ hidden tests and solutions)
 docs/results.schema.json
 results/             committed JSONL from real sweeps
 scripts/check.py     compile + tests + validate + oracle dry run (no API calls)
+scripts/task_features.py  task size and shape -> docs/task_features.json
+scripts/power.py     how many tasks and runs a sweep needs (simulation)
 ```

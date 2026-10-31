@@ -1,0 +1,12 @@
+{
+  "id": "B-so",
+  "name": "Sonnet builder + Opus reviewer",
+  "description": "Config B with an Opus reviewer: the builder and its fix round run on Sonnet, the read-only reviewer on Opus. Real runs need the user's OK for Opus.",
+  "agents_dir": "configs/B/.claude/agents",
+  "stages": [
+    {"name": "build", "agent": "builder", "prompt": "solve.md", "mode": "write", "model": "sonnet"},
+    {"name": "review", "agent": "reviewer", "prompt": "review.md", "mode": "read", "schema": "verdict", "model": "opus"},
+    {"name": "fix", "agent": "builder", "prompt": "fix.md", "mode": "write", "model": "sonnet",
+     "only_if": {"stage": "review", "field": "verdict", "equals": "CHANGES_NEEDED"}}
+  ]
+}

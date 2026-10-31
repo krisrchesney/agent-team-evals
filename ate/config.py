@@ -13,7 +13,11 @@ def load_defaults(path=None):
 
 
 STAGE_KEYS = {"name", "agent", "prompt", "mode", "schema", "only_if", "foreach",
-              "tools", "allowed_tools", "settings"}  # the last three are optional per-stage overrides
+              "tools", "allowed_tools", "settings",  # optional per-stage overrides
+              "model", "run"}  # a fixed model for this stage (mixed-model teams); a harness-run stage
+CONFIG_KEYS = {"id", "name", "description", "agents_dir", "max_subtasks", "stages", "best_of"}
+STAGE_MODELS = ("haiku", "sonnet", "opus")  # Claude models only; Opus runs still need the user's OK
+HARNESS_STAGES = ("visible_tests",)  # stages the harness runs itself: no model call, no tokens
 
 # A per-stage settings file must not be able to change who is billed, which model runs, or how
 # permissions work: those are fixed for every config so only the team structure differs.
@@ -63,12 +67,25 @@ def validate_stage(stage, config_id="?"):
         if not isinstance(stage["settings"], str):
             raise ValueError(f"{where}: settings must be a path string")
         check_settings_file(settings_path(stage["settings"]))
+    if "model" in stage and stage["model"] not in STAGE_MODELS:
+        raise ValueError(f"{where}: model must be one of {STAGE_MODELS}")
+    if "run" in stage:
+        if stage["run"] not in HARNESS_STAGES:
+            raise ValueError(f"{where}: run must be one of {HARNESS_STAGES}")
+        extra = set(stage) - {"name", "run", "only_if"}
+        if extra:
+            raise ValueError(f"{where}: a harness stage takes only name, run and only_if, not {sorted(extra)}")
 
 
 def load_config(config_id):
     cfg = json.loads((CONFIG_DIR / f"{config_id}.json").read_text(encoding="utf-8"))
     if cfg["id"] != config_id:
         raise ValueError(f"{config_id}.json has id {cfg['id']!r}")
+    unknown = set(cfg) - CONFIG_KEYS - {k for k in cfg if k.startswith("_")}
+    if unknown:
+        raise ValueError(f"config {config_id}: unknown keys {sorted(unknown)}")
+    if not (isinstance(cfg.get("best_of", 1), int) and 1 <= cfg.get("best_of", 1) <= 3):
+        raise ValueError(f"config {config_id}: best_of must be 1, 2 or 3")
     for stage in cfg["stages"]:
         validate_stage(stage, config_id)
     return cfg

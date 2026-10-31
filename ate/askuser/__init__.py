@@ -46,13 +46,18 @@ def read_log(log_path, skip=0):
     return out
 
 
-def isolation_problems(mcp_servers):
+def isolation_problems(mcp_servers, skills=None, slash_commands=None):
     """Check the startup event's `mcp_servers` when ask_user is on: a list of problems (empty = fine).
 
-    Only SERVER_NAME may be loaded, and it must be connected. Anything else is a leak of the personal
+    Without --safe-mode these runs must also load no skills and no slash commands (non-empty lists are
+    flagged). Only SERVER_NAME may be loaded, and it must be connected. Anything else is a leak of the personal
     setup; a missing or failed ask_user means the agent could not ask, so the run is not valid.
     """
     problems, found = [], False
+    if skills:
+        problems.append(f"skills loaded: {skills}")
+    if slash_commands:
+        problems.append(f"slash commands loaded: {slash_commands}")
     for srv in mcp_servers or []:
         name = srv.get("name") if isinstance(srv, dict) else str(srv)
         if name == SERVER_NAME:
@@ -63,5 +68,5 @@ def isolation_problems(mcp_servers):
         else:
             problems.append(f"unexpected mcp server loaded: {srv}")
     if not found:
-        problems.append(f"{SERVER_NAME} server not loaded (does --safe-mode block --mcp-config?)")
+        problems.append(f"{SERVER_NAME} server not loaded")
     return problems

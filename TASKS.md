@@ -87,33 +87,24 @@ hidden tests), t20-vendor-import (new supplier format plus importer contract and
 A passed 3 of 3 (sweep 20261030T165840Z). Project stopped here by the user's choice; no more runs planned.
 
 ### T-9: Config A2: equal-compute baseline (best of 2 single agents)
-Status: Blocked
-Owns: configs/A2.json (new); ate/pipeline.py (`run_one` loop only)
-Blocked by: T-7 (both touch pipeline.py)
-Why: Separates "more usage" from "better structure" (DESIGN §3). Two independent A attempts,
-keep the first whose visible tests pass.
-Done when:
-- [ ] Each attempt gets a fresh worktree; usage is summed over both attempts
-- [ ] Dry-run oracle passes; check.py passes
+Status: Done 2026-10-30 in T-18 (branch ticket/T-18-phase0): `best_of` config key, fresh worktree per try,
+first try whose visible tests pass is graded, usage summed; record field `tries`. Dry-run tests cover both paths.
 
 ### T-10: Config C-auto: Claude orchestrates the team itself
-Status: Blocked
+Status: Ready (phase 2, optional)
 Owns: configs/C-auto.json (new); configs/C-auto/.claude/agents/ (new)
-Blocked by: T-7
+Blocked by: none. Check first: `--safe-mode` hides `--agents`, so the lead may only reach the built-in
+general-purpose subagent; the roles would have to go in the lead's prompt.
 Why: Measures in-session subagent orchestration (one `claude -p` with a lead agent calling planner,
 builder and reviewer), as opposed to harness-driven C.
 Done when:
 - [ ] Single stage, lead agent with the Agent tool; roles copied unchanged from configs/C
 - [ ] Dry run passes; DESIGN §2 mentions it
 
-### T-11: Config D: single agent + Stop-hook test gate
-Status: Blocked
-Owns: configs/D.json (new); configs/D/ (new: settings + hook script)
-Blocked by: T-7
-Why: The Boxwatch hook pattern without a second agent. A cheap alternative to a reviewer.
-Done when:
-- [ ] The hook runs the visible tests (never the hidden ones) and blocks stopping once
-- [ ] Dry run passes
+### T-11: Config D: single agent + test gate
+Status: Done 2026-10-30 in T-18: a harness stage (`"run": "visible_tests"`) runs the repo's own tests with no
+model call, and one fix round (prompt gate_fix.md) runs only if they fail. Not a Stop hook: `--safe-mode`
+turns hooks off.
 
 ### T-12: Parallel runs (`--jobs N`)
 Status: Blocked
@@ -145,6 +136,55 @@ Blocked by: user (create the public repo and push?) and a real sweep
 Done when:
 - [ ] CI runs `python scripts/check.py` (no API calls, no secrets)
 - [ ] README results come only from committed results/*.jsonl, sweep id cited
+
+### T-18: Phase 2 study, phase 0: setups and tools (no plan usage)
+Status: Review (ticket/T-18-phase0)
+Owns: ate/config.py, ate/pipeline.py, ate/grade.py, ate/__main__.py (estimate), configs/{A2,AS,D,B-hs,B-so}.json,
+configs/prompts/{gate_fix,recheck}.md, scripts/{task_features,power}.py, docs/task_features.json, DESIGN.md 5b
+Why: DESIGN section 5b. Configs for every question in the study, task measurements to chart results
+against, and the sample size the main sweep needs.
+Done when:
+- [x] Per-stage `model` (haiku, sonnet, opus); `best_of` (A2); harness stage `visible_tests` (D); AS self-check
+- [x] Subtest failures counted once per test in grading (the "passed 0" quirk)
+- [x] `scripts/task_features.py --write` and `scripts/power.py`; DESIGN 5b has the plan and the power table
+- [x] Dry-run tests for A2 (both paths), D (both paths), stage models; check.py passes; A, B, C commands unchanged
+
+### T-19: Phase 1 task batch: tasks where one agent should fail sometimes
+Status: Ready
+Owns: tasks/t22-* and up (new)
+Why: The first study's tasks never made A fail. DESIGN 5b lists five kinds to build: rules only implied by
+code, large repos, cross-module changes, clarify-first requests (needs T-23), long multi-step features.
+Done when:
+- [ ] About 20 candidates, each validating, with an AUDIT.md mapping every hidden test to a rule in the repo
+- [ ] task_features.json regenerated
+
+### T-20: Phase 1 screening (user): config A, Sonnet, 2 runs per candidate
+Status: Blocked by T-19 and the user's go (estimate first)
+Why: Go/no-go. Keep tasks A passes some of the time but not always. If none, the study ends there.
+
+### T-21: Phase 2 main sweep (user)
+Status: Blocked by T-20
+Why: About 20 screened tasks x 5 runs x A, AS, D, A2, B (+ C on large-repo tasks). Run in batches across
+usage windows with run_sweep.ps1; estimate before each batch.
+
+### T-22: Phase 3 model matrix (user, Opus OK needed)
+Status: Blocked by T-21
+Why: A with Haiku and Opus, B-hs, B-so on a 10-task subset x 3 runs.
+
+### T-23: Stand-in user for clarify-first tasks
+Status: Ready
+Owns: ate/askuser/ (new local stdio MCP server), configs/defaults.json (an `ask_user` tool option)
+Why: Headless runs cannot ask questions. A tiny MCP tool answers from the task's hidden answers.json
+(keyword match, no model call) and logs each question, so "asked the right question" is measurable.
+Done when:
+- [ ] Passed with `--mcp-config` alongside `--strict-mcp-config`; the isolation check allows only this server
+- [ ] Questions and answers are recorded per run; dry-run test
+
+### T-24: Report and charts for the phase 2 study
+Status: Ready
+Owns: ate/report.py, scripts/plot.py
+Why: Tokens per passed run by config, pass rate against task features, and the "cheapest reliable setup"
+map, from results JSONL only.
 
 ## In progress
 

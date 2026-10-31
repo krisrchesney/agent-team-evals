@@ -65,8 +65,10 @@ def _estimate(task_ids, config_ids, reps, defaults):
         cfg = config.load_config(cid)
         stages = 0
         for st in cfg["stages"]:
+            if "run" in st:
+                continue  # harness-run stage: no model call
             stages += cfg.get("max_subtasks", 3) if "foreach" in st else 1
-        total += stages * per_stage * len(task_ids) * reps
+        total += stages * cfg.get("best_of", 1) * per_stage * len(task_ids) * reps  # worst case: every try runs
     cap = float(defaults["run_cap_api_equiv_usd"]) * len(task_ids) * len(config_ids) * reps
     return round(total, 2), round(cap, 2)
 

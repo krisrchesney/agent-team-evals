@@ -12,6 +12,8 @@ from pathlib import Path
 HIDDEN_DIR = "_ate_hidden"
 _RAN = re.compile(r"^Ran (\d+) tests? in", re.M)
 _FAILED = re.compile(r"^FAILED \((.*)\)", re.M)
+# "FAIL: test_x (pkg.mod.Cls.test_x) (i=3)": one header per failing subtest, so key on the test, not the line.
+_HEADER = re.compile(r"^(FAIL|ERROR): (\S+ \([^)]*\))", re.M)
 
 
 def clear_bytecode(root):
@@ -44,6 +46,13 @@ def parse_unittest_output(text, returncode):
                 failed = int(val)
             elif key == "errors":
                 errors = int(val)
+    # The FAILED line counts subtests, which can exceed the number of tests that ran. Count each
+    # failing test once instead (a test with both a failure and an error counts as failed).
+    headers = _HEADER.findall(text)
+    if headers:
+        failing = {name for kind, name in headers if kind == "FAIL"}
+        erroring = {name for kind, name in headers if kind == "ERROR"} - failing
+        failed, errors = len(failing), len(erroring)
     if total == 0 and returncode != 0:
         errors = max(errors, 1)  # import error before any test ran
     passed = max(total - failed - errors, 0)

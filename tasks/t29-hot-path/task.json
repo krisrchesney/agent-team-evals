@@ -1,0 +1,8 @@
+{
+  "id": "t29-hot-path",
+  "title": "Find and fix quadratic code paths in an event analytics pipeline without changing results",
+  "category": "large-repo",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 240
+}

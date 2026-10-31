@@ -150,10 +150,25 @@ Done when:
 - [x] Dry-run tests for A2 (both paths), D (both paths), stage models; check.py passes; A, B, C commands unchanged
 
 ### T-19: Phase 1 task batch: tasks where one agent should fail sometimes
-Status: Ready
+Status: In progress (ticket/T-19-batch4). Done: t22-stock-holds (implied by code, 31 hidden tests).
 Owns: tasks/t22-* and up (new)
 Why: The first study's tasks never made A fail. DESIGN 5b lists five kinds to build: rules only implied by
 code, large repos, cross-module changes, clarify-first requests (needs T-23), long multi-step features.
+Candidates (one folder each; independent, so they can be written in parallel sessions):
+- Implied by code: t22-stock-holds (done); t23-flag-rollouts (new flag type; hashing and evaluation
+  order only in existing types); t24-cli-export (new subcommand; exit codes, stderr format, --json shape
+  shared by the others); t25-pipeline-plugin (new stage plugin; lifecycle and error wrapping in the base).
+- Large repo (3,000+ lines, must search): t26-proration (one period rule computed in five places);
+  t27-search-field (new indexed field through serializer, tokenizer, query parser, cache key);
+  t28-config-rename (rename a setting with back-compat across a dozen modules); t29-hot-path (an
+  O(n^2) path; hidden tests have a time budget).
+- Cross-module: t30-multi-currency (single-currency ledger to multi-currency); t31-aware-times (naive
+  to timezone-aware datetimes across a scheduler); t32-soft-delete (every query must skip deleted rows);
+  t33-tenant-scope (tenant id through every read and write).
+- Long multi-step: t34-migrations (ordering, rollback, checksums); t35-rate-limits (token bucket, sliding
+  window, persistence, clock skew); t36-patch-apply (diff, unified format, fuzzy apply); t37-mini-sql
+  (joins and GROUP BY over CSV tables).
+- Clarify-first (need T-23): t38 to t41, ambiguous requests with a hidden answer sheet.
 Done when:
 - [ ] About 20 candidates, each validating, with an AUDIT.md mapping every hidden test to a rule in the repo
 - [ ] task_features.json regenerated

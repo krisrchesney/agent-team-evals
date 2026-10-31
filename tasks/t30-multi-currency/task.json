@@ -1,0 +1,8 @@
+{
+  "id": "t30-multi-currency",
+  "title": "Make a single-currency ledger multi-currency across every module",
+  "category": "cross-module",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

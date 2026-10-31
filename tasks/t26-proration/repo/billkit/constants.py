@@ -1,0 +1,10 @@
+"""Numbers that more than one module needs."""
+
+DAYS_PER_MONTH = 30
+MONTHS_PER_YEAR = 12
+
+TRIAL_DAYS = 14
+DUNNING_DELAYS = (3, 7, 14)
+AGING_BUCKETS = (30, 60, 90)
+MAX_SEATS = 5000
+INVOICE_DUE_DAYS = 14

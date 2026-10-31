@@ -1,0 +1,8 @@
+{
+  "id": "t28-config-rename",
+  "title": "Rename a setting with back-compat across a dozen modules of a job daemon",
+  "category": "large-repo",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

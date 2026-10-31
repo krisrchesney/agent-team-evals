@@ -1,0 +1,8 @@
+{
+  "id": "t32-soft-delete",
+  "title": "Add soft delete to a help desk so every query path skips deleted rows",
+  "category": "cross-module",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

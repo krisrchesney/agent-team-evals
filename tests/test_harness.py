@@ -13,6 +13,8 @@ class TestConfigs(unittest.TestCase):
         for cid in config.list_configs():
             cfg = config.load_config(cid)
             for st in cfg["stages"]:
+                if "run" in st:
+                    continue  # harness-run stage: no prompt
                 config.load_prompt(st["prompt"])
                 if st.get("schema"):
                     config.load_schema(st["schema"])
@@ -102,6 +104,27 @@ class TestGrading(unittest.TestCase):
         crash = grade.parse_unittest_output("ImportError: boom\n", 1)
         self.assertFalse(crash["ok"])
 
+    def test_failing_subtests_count_once_per_test(self):
+        """Three failing subtests in one test used to count as 3 failures out of 2 tests, so passed showed 0."""
+        text = ("FAIL: test_a (m.T.test_a) (i=1)\n---\nFAIL: test_a (m.T.test_a) (i=2)\n---\n"
+                "ERROR: test_a (m.T.test_a) (i=3)\n---\nRan 2 tests in 0.1s\n\nFAILED (failures=2, errors=1)\n")
+        r = grade.parse_unittest_output(text, 1)
+        self.assertEqual((r["total"], r["passed"], r["failed"], r["errors"]), (2, 1, 1, 0))
+        self.assertFalse(r["ok"])
+
+    def test_real_subtest_run_counts_tests(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "tests").mkdir()
+            (root / "tests" / "__init__.py").write_text("")
+            (root / "tests" / "test_s.py").write_text(
+                "import unittest\n\nclass T(unittest.TestCase):\n"
+                "    def test_sub(self):\n        for i in range(3):\n            with self.subTest(i=i):\n"
+                "                self.assertEqual(i, 0)\n"
+                "    def test_ok(self):\n        pass\n")
+            r = grade.run_unittest(root, "tests", 60)
+            self.assertEqual((r["total"], r["passed"], r["failed"]), (2, 1, 1))
+
     def test_same_size_same_mtime_edit_is_not_graded_from_stale_bytecode(self):
         """A stale .pyc (same source size and mtime) must not hide an edit: t18 failed on Linux CI this way."""
         import os
@@ -189,6 +212,54 @@ class TestDryRunEndToEnd(unittest.TestCase):
                                  fake=pipeline.make_fake(task, verdict="APPROVE"))
         self.assertEqual([s["name"] for s in r["stages"]], ["build", "review"])
         self.assertFalse(r["fix_round"])
+
+    def _one(self, cid, oracle, seen=None, break_visible=False):
+        defaults = config.load_defaults()
+        task = tasks.load_task(tasks.list_tasks()[0])
+        inner = pipeline.make_fake(task if oracle else None)
+
+        def fake(spec):
+            if seen is not None:
+                seen.append((spec.name, spec.model))
+            if break_visible and "Edit" in spec.tools:  # a write stage that leaves a visible test failing
+                (Path(spec.cwd) / "tests" / "test_zz_broken.py").write_text(
+                    "import unittest\n\nclass T(unittest.TestCase):\n    def test_x(self):\n        self.fail()\n")
+            return inner(spec)
+        with tempfile.TemporaryDirectory() as tmp:
+            return pipeline.run_one(task, config.load_config(cid), 1, defaults=defaults, sweep_id="t",
+                                    work_root=Path(tmp), results_path=Path(tmp) / "r.jsonl", binary=None,
+                                    claude_version="dry-run", harness_sha=None, fake=fake)
+
+    def test_best_of_two_stops_at_first_visible_pass(self):
+        r = self._one("A2", oracle=True)
+        self.assertEqual([s["name"] for s in r["stages"]], ["solve"])
+        self.assertEqual(r["tries"], [{"try": 1, "visible_ok": True, "stopped": None}])
+        r = self._one("A2", oracle=False, break_visible=True)  # visible tests fail, so a fresh second attempt runs
+        self.assertEqual([s["name"] for s in r["stages"]], ["solve", "solve.try2"])
+        self.assertEqual([t["visible_ok"] for t in r["tries"]], [False, False])
+        self.assertTrue(r["worktree"].endswith("wt2"))
+
+    def test_test_gate_runs_fix_only_when_visible_tests_fail(self):
+        r = self._one("D", oracle=True)
+        self.assertEqual([s["name"] for s in r["stages"]], ["solve", "gate"])
+        self.assertTrue(r["stages"][1]["visible_ok"])
+        r = self._one("D", oracle=False, break_visible=True)
+        self.assertEqual([s["name"] for s in r["stages"]], ["solve", "gate", "fix"])
+        self.assertEqual(r["stages"][1]["num_turns"], 0)
+
+    def test_stage_model_override(self):
+        seen = []
+        self._one("B-hs", oracle=False, seen=seen)
+        self.assertEqual(seen, [("build", "haiku"), ("review", "sonnet"), ("fix", "haiku")])
+        seen = []
+        self._one("B", oracle=False, seen=seen)
+        self.assertEqual({m for _, m in seen}, {"sonnet"})
+
+    def test_bad_stage_model_and_config_keys_rejected(self):
+        with self.assertRaises(ValueError):
+            config.validate_stage({"name": "x", "prompt": "solve.md", "model": "gpt-5"})
+        with self.assertRaises(ValueError):
+            config.validate_stage({"name": "g", "run": "visible_tests", "prompt": "solve.md"})
 
 
 class TestSubscriptionSafety(unittest.TestCase):

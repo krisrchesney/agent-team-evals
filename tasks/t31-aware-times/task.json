@@ -1,0 +1,8 @@
+{
+  "id": "t31-aware-times",
+  "title": "Make a naive-datetime scheduler timezone-aware across every module",
+  "category": "cross-module",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

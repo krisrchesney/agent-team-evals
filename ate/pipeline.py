@@ -103,11 +103,14 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
         "harness_sha": harness_sha, "cap_api_equiv_usd": budget, "worktree": str(wt_path), "error": None,
         "auth": defaults.get("auth", "subscription"), "attempt": attempt, "isolation_flags": [],
     }
-    seed = None
+    tries = int(cfg.get("best_of", 1))
+    if tries > 1:
+        rec["tries"] = []
+    worktrees, seed = [], None
     try:
         seed, seed_sha = workspace.ensure_seed(task, work_root)
         branch = f"run/{sweep_id}/{cfg['id']}/r{rep}{suffix.replace('__', '-')}"
-        workspace.add_worktree(seed, seed_sha, wt_path, branch)
+        run_dir.mkdir(parents=True, exist_ok=True)
 
         agents = config.load_agents(cfg.get("agents_dir"))
         config.check_agent_models(agents, defaults["model"])
@@ -116,93 +119,23 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
             agents_file = run_dir / "agents.json"
             agents_file.write_text(json.dumps(agents, indent=2), encoding="utf-8")
 
-        outputs, last_summary, stopped = {}, "", None
-        leak_needles = ["hidden_tests", "_ate_hidden", "agent-team-evals"]
-        for st, extra in _expand_stages(cfg, outputs):
-            remaining = budget - rec["api_equiv_usd"]
-            if remaining < MIN_STAGE_BUDGET:
-                stopped = "cap_exceeded"
+        # best_of > 1 (config A2): independent attempts, each in its own fresh worktree. Keep the first
+        # attempt whose visible tests pass, else the last one. Usage is summed over every attempt.
+        for k in range(1, tries + 1):
+            tag = "" if k == 1 else f".try{k}"
+            wt_path = run_dir / ("wt" if k == 1 else f"wt{k}")
+            workspace.add_worktree(seed, seed_sha, wt_path, branch + ("" if k == 1 else f"-try{k}"))
+            worktrees.append(wt_path)
+            stopped = _run_stages(task, cfg, rec, wt_path, run_dir, tag, defaults=defaults, budget=budget,
+                                  subscription=subscription, env=env, agents=agents, agents_file=agents_file,
+                                  binary=binary, fake=fake)
+            if tries == 1:
                 break
-            read_only = st.get("mode") == "read"
-            prompt = _render(st["prompt"], task_prompt=task.prompt, builder_summary=last_summary or "(none)",
-                             findings=_format_findings(outputs.get("review")), **extra)
-            spec = claude.StageSpec(
-                name=st["name"], prompt=prompt, cwd=wt_path, log_path=run_dir / f"{st['name']}.jsonl",
-                model=defaults["model"], max_turns=int(defaults["stage_max_turns"]),
-                cap_api_equiv_usd=remaining, timeout_s=int(defaults["stage_timeout_s"]),
-                permission_mode=defaults["permission_mode"],
-                tools=st.get("tools") or defaults["tools_read" if read_only else "tools_write"],
-                allowed_tools=st.get("allowed_tools") or defaults["allowed_tools_read" if read_only else "allowed_tools_write"],
-                settings_file=config.settings_path(st["settings"]) if st.get("settings") else None,
-                bare=not subscription, safe_mode=subscription, effort=defaults.get("effort"), env=env,
-                agent=st.get("agent"), agents_file=agents_file if st.get("agent") and not subscription else None,
-                role_prompt=_role_prompt(agents, st.get("agent")) if subscription else None,
-                json_schema=config.load_schema(st["schema"]) if st.get("schema") else None,
-            )
-            before = workspace.snapshot_tree(wt_path) if read_only else None
-            res = claude.run_stage(binary, spec, fake=fake)
-            if read_only and workspace.snapshot_tree(wt_path) != before:
-                rec["read_only_violations"].append(st["name"])
-                workspace.restore_tree(wt_path, before)
-
-            rec["stages"].append(res.as_record())
-            rec["api_equiv_usd"] = round(rec["api_equiv_usd"] + res.api_equiv_usd, 6)
-            for k in rec["tokens"]:
-                rec["tokens"][k] += res.tokens.get(k, 0)
-            rec["num_turns"] += res.num_turns
-            rec["agent_wall_s"] = round(rec["agent_wall_s"] + res.duration_s, 2)
-            rec["leak_suspected"] += [f"{st['name']}:{n}" for n in claude.log_mentions(spec.log_path, leak_needles)]
-
-            base = st["name"].split("_")[0] if "foreach" in st else st["name"]
-            if res.structured is not None:
-                outputs[base] = res.structured
-            if not read_only:
-                last_summary = res.result_text[:4000]
-            if base == "review":
-                rec["review_verdict"] = (res.structured or {}).get("verdict")
-            if base == "plan":
-                rec["plan_subtasks"] = len((res.structured or {}).get("subtasks") or [])
-            if base == "fix":
-                rec["fix_round"] = True
-
-            if subscription and fake is None and res.api_key_source not in (None, "none"):
-                stopped = "auth_error"
-                rec["error"] = f"stage {st['name']} authenticated with {res.api_key_source}, not the subscription"
+            visible = grade.run_unittest(wt_path, "tests", task.test_timeout_s)
+            rec["tries"].append({"try": k, "visible_ok": bool(visible["ok"]), "stopped": stopped})
+            if stopped or visible["ok"]:
                 break
-            if _PERSONAL_CANARY.match(res.result_text or ""):
-                rec["isolation_flags"].append(f"{st['name']}:personal CLAUDE.md rule visible in reply")
-            init = claude.scan_log(spec.log_path)["init"] or {}
-            extra_plugins = [pl for pl in init.get("plugins") or [] if pl.get("path") != "builtin"]
-            if extra_plugins:
-                rec["isolation_flags"].append(f"{st['name']}:plugins loaded: {extra_plugins}")
-            if init.get("mcp_servers"):
-                rec["isolation_flags"].append(f"{st['name']}:mcp_servers loaded: {init['mcp_servers']}")
-            tools = init.get("tools")
-            if (fake is None and tools is not None and not read_only
-                    and not {"Bash", "PowerShell"} & set(tools)):
-                stopped = "harness_error"
-                rec["error"] = (f"stage {st['name']} had no shell tool (tools: {sorted(tools)}), "
-                                f"so the agent could not run tests")
-                break
-            if res.rate_limited:
-                stopped = "rate_limited"
-                rec["error"] = (res.error or res.result_text or "usage limit")[:500]
-                break
-            if res.timed_out:
-                stopped = "timeout"
-                break
-            if res.subtype and "budget" in res.subtype:
-                stopped = "cap_exceeded"
-                break
-            # A failed write stage or planner ends the run. A failed reviewer does not: there is
-            # simply no verdict, so the fix round is skipped and we grade what the builder made.
-            if (res.exit_code != 0 or res.subtype is None) and (base == "plan" or not read_only):
-                # The CLI rejected the command before any model call (0 tokens, 0 turns): a harness problem,
-                # not a verdict on the config, so it is retryable and left out of the statistics.
-                never_ran = res.num_turns == 0 and sum(res.tokens.values()) == 0 and not res.timed_out
-                stopped = "harness_error" if never_ran else "agent_error"
-                rec["error"] = res.error
-                break
+        rec["worktree"] = str(wt_path)
 
         final_tree = workspace.snapshot_tree(wt_path)
         rec["diff"] = workspace.diff_stats(wt_path, seed_sha, final_tree)
@@ -220,10 +153,117 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
         rec["status"] = "harness_error"
         rec["error"] = f"{type(exc).__name__}: {exc}"
     finally:
-        if seed is not None and not keep_worktree and wt_path.exists():
-            workspace.remove_worktree(seed, wt_path)
+        if seed is not None and not keep_worktree:
+            for wt in worktrees:
+                if wt.exists():
+                    workspace.remove_worktree(seed, wt)
     results.append(results_path, rec)
     return rec
+
+
+def _run_stages(task, cfg, rec, wt_path, run_dir, tag, *, defaults, budget, subscription, env, agents,
+                agents_file, binary, fake):
+    """Run one attempt's stages in `wt_path`, adding their usage to `rec`. Returns why it stopped early, or None."""
+    outputs, last_summary, stopped, test_output = {}, "", None, "(none)"
+    leak_needles = ["hidden_tests", "_ate_hidden", "agent-team-evals"]
+    for st, extra in _expand_stages(cfg, outputs):
+        if st.get("run") == "visible_tests":
+            # Harness-run gate (config D): run the repo's own tests, no model call. Never the hidden ones.
+            v = grade.run_unittest(wt_path, "tests", task.test_timeout_s)
+            outputs[st["name"]] = {"ok": bool(v["ok"])}
+            test_output = v["output_tail"][-3000:]
+            rec["stages"].append({"name": st["name"] + tag, "agent": None, "harness": "visible_tests",
+                                  "visible_ok": bool(v["ok"]), "exit_code": 0, "api_equiv_usd": 0.0,
+                                  "num_turns": 0, "duration_s": 0.0,
+                                  "tokens": {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0}})
+            continue
+        remaining = budget - rec["api_equiv_usd"]
+        if remaining < MIN_STAGE_BUDGET:
+            stopped = "cap_exceeded"
+            break
+        read_only = st.get("mode") == "read"
+        prompt = _render(st["prompt"], task_prompt=task.prompt, builder_summary=last_summary or "(none)",
+                         findings=_format_findings(outputs.get("review")),
+                         test_output=test_output, **extra)
+        name = st["name"] + tag
+        spec = claude.StageSpec(
+            name=name, prompt=prompt, cwd=wt_path, log_path=run_dir / f"{name}.jsonl",
+            model=st.get("model") or defaults["model"], max_turns=int(defaults["stage_max_turns"]),
+            cap_api_equiv_usd=remaining, timeout_s=int(defaults["stage_timeout_s"]),
+            permission_mode=defaults["permission_mode"],
+            tools=st.get("tools") or defaults["tools_read" if read_only else "tools_write"],
+            allowed_tools=st.get("allowed_tools") or defaults["allowed_tools_read" if read_only else "allowed_tools_write"],
+            settings_file=config.settings_path(st["settings"]) if st.get("settings") else None,
+            bare=not subscription, safe_mode=subscription, effort=defaults.get("effort"), env=env,
+            agent=st.get("agent"), agents_file=agents_file if st.get("agent") and not subscription else None,
+            role_prompt=_role_prompt(agents, st.get("agent")) if subscription else None,
+            json_schema=config.load_schema(st["schema"]) if st.get("schema") else None,
+        )
+        before = workspace.snapshot_tree(wt_path) if read_only else None
+        res = claude.run_stage(binary, spec, fake=fake)
+        if read_only and workspace.snapshot_tree(wt_path) != before:
+            rec["read_only_violations"].append(name)
+            workspace.restore_tree(wt_path, before)
+
+        rec["stages"].append(res.as_record())
+        rec["api_equiv_usd"] = round(rec["api_equiv_usd"] + res.api_equiv_usd, 6)
+        for k in rec["tokens"]:
+            rec["tokens"][k] += res.tokens.get(k, 0)
+        rec["num_turns"] += res.num_turns
+        rec["agent_wall_s"] = round(rec["agent_wall_s"] + res.duration_s, 2)
+        rec["leak_suspected"] += [f"{name}:{n}" for n in claude.log_mentions(spec.log_path, leak_needles)]
+
+        base = st["name"].split("_")[0] if "foreach" in st else st["name"]
+        if res.structured is not None:
+            outputs[base] = res.structured
+        if not read_only:
+            last_summary = res.result_text[:4000]
+        if base == "review":
+            rec["review_verdict"] = (res.structured or {}).get("verdict")
+        if base == "plan":
+            rec["plan_subtasks"] = len((res.structured or {}).get("subtasks") or [])
+        if base == "fix":
+            rec["fix_round"] = True
+
+        if subscription and fake is None and res.api_key_source not in (None, "none"):
+            stopped = "auth_error"
+            rec["error"] = f"stage {st['name']} authenticated with {res.api_key_source}, not the subscription"
+            break
+        if _PERSONAL_CANARY.match(res.result_text or ""):
+            rec["isolation_flags"].append(f"{st['name']}:personal CLAUDE.md rule visible in reply")
+        init = claude.scan_log(spec.log_path)["init"] or {}
+        extra_plugins = [pl for pl in init.get("plugins") or [] if pl.get("path") != "builtin"]
+        if extra_plugins:
+            rec["isolation_flags"].append(f"{st['name']}:plugins loaded: {extra_plugins}")
+        if init.get("mcp_servers"):
+            rec["isolation_flags"].append(f"{st['name']}:mcp_servers loaded: {init['mcp_servers']}")
+        tools = init.get("tools")
+        if (fake is None and tools is not None and not read_only
+                and not {"Bash", "PowerShell"} & set(tools)):
+            stopped = "harness_error"
+            rec["error"] = (f"stage {st['name']} had no shell tool (tools: {sorted(tools)}), "
+                            f"so the agent could not run tests")
+            break
+        if res.rate_limited:
+            stopped = "rate_limited"
+            rec["error"] = (res.error or res.result_text or "usage limit")[:500]
+            break
+        if res.timed_out:
+            stopped = "timeout"
+            break
+        if res.subtype and "budget" in res.subtype:
+            stopped = "cap_exceeded"
+            break
+        # A failed write stage or planner ends the run. A failed reviewer does not: there is
+        # simply no verdict, so the fix round is skipped and we grade what the builder made.
+        if (res.exit_code != 0 or res.subtype is None) and (base == "plan" or not read_only):
+            # The CLI rejected the command before any model call (0 tokens, 0 turns): a harness problem,
+            # not a verdict on the config, so it is retryable and left out of the statistics.
+            never_ran = res.num_turns == 0 and sum(res.tokens.values()) == 0 and not res.timed_out
+            stopped = "harness_error" if never_ran else "agent_error"
+            rec["error"] = res.error
+            break
+    return stopped
 
 
 def make_fake(task=None, verdict="CHANGES_NEEDED"):

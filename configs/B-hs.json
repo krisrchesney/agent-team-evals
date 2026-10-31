@@ -1,0 +1,12 @@
+{
+  "id": "B-hs",
+  "name": "Haiku builder + Sonnet reviewer",
+  "description": "Config B with a mixed team: the builder and its fix round run on Haiku, the read-only reviewer on Sonnet. Asks whether a cheap builder plus a stronger reviewer matches a stronger single agent.",
+  "agents_dir": "configs/B/.claude/agents",
+  "stages": [
+    {"name": "build", "agent": "builder", "prompt": "solve.md", "mode": "write", "model": "haiku"},
+    {"name": "review", "agent": "reviewer", "prompt": "review.md", "mode": "read", "schema": "verdict", "model": "sonnet"},
+    {"name": "fix", "agent": "builder", "prompt": "fix.md", "mode": "write", "model": "haiku",
+     "only_if": {"stage": "review", "field": "verdict", "equals": "CHANGES_NEEDED"}}
+  ]
+}

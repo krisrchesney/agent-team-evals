@@ -1,0 +1,10 @@
+{
+  "id": "AS",
+  "name": "Single agent + self-check",
+  "description": "One agent solves the task, then a fresh run of the same agent (no reviewer role, write access) re-reads the request, checks the work and fixes what it finds. Separates 'a second look' from 'a separate reviewer'.",
+  "agents_dir": null,
+  "stages": [
+    {"name": "solve", "agent": null, "prompt": "solve.md", "mode": "write"},
+    {"name": "recheck", "agent": null, "prompt": "recheck.md", "mode": "write"}
+  ]
+}

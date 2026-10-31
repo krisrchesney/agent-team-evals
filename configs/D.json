@@ -1,0 +1,12 @@
+{
+  "id": "D",
+  "name": "Single agent + test gate",
+  "description": "One agent solves the task; the harness then runs the repo's visible tests (no model call). If they fail, the same kind of agent gets one round with the failing output. No second role.",
+  "agents_dir": null,
+  "stages": [
+    {"name": "solve", "agent": null, "prompt": "solve.md", "mode": "write"},
+    {"name": "gate", "run": "visible_tests"},
+    {"name": "fix", "agent": null, "prompt": "gate_fix.md", "mode": "write",
+     "only_if": {"stage": "gate", "field": "ok", "equals": false}}
+  ]
+}

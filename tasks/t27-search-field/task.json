@@ -1,0 +1,8 @@
+{
+  "id": "t27-search-field",
+  "title": "Add an indexed field to a search library: serializer, analysis, query parser, cache key, highlights",
+  "category": "large-repo",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

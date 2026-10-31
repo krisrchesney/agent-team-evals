@@ -1,0 +1,8 @@
+{
+  "id": "t23-flag-rollouts",
+  "title": "Add a ramp flag type to a feature-flag library whose conventions live only in its code",
+  "category": "implied-by-code",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

@@ -1,0 +1,8 @@
+{
+  "id": "t24-cli-export",
+  "title": "Add an export subcommand to a CLI whose exit codes and output shapes live only in its code",
+  "category": "implied-by-code",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

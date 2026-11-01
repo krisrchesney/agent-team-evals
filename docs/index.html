@@ -80,11 +80,13 @@ and measures two things: how often each setup passes, and how many tokens it use
 </div>
 
 <div class="verdict">
-  <p><strong>So far: not on clearly specified tasks.</strong> A single agent passed 14 of 15 pilot runs;
-  both teams passed 15 of 15, a difference too small to separate from chance. The teams used
-  1.6x and 2.8x the tokens. A single agent then passed every one of 13 tasks written to be hard,
-  with Sonnet 5.5 and with the smaller Haiku 5.5, and all three tasks whose rules were left out of the
-  request and had to be found in the codebase. In 39 single-agent runs so far, it has failed once.</p>
+  <p><strong>Not settled yet: the first study was too small.</strong> In the 45-run pilot a single agent
+  passed 14 of 15 runs and both teams passed 15 of 15. One run in 15 is too few to tell a real gap
+  from chance either way, and the teams used 1.6x and 2.8x the tokens. A single agent then passed every
+  one of 13 tasks written to be hard, with Sonnet 5.5 and with the smaller Haiku 5.5, and all three
+  tasks whose rules were left out of the request and had to be found in the codebase: one failure in
+  39 single-agent runs. A second, larger study is under way with harder tasks, five runs per task for
+  each setup, and more setups and Claude models.</p>
 </div>
 
 <h2>The three setups</h2>

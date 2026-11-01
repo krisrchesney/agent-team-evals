@@ -1,0 +1,8 @@
+{
+  "id": "t33-tenant-scope",
+  "title": "Thread a tenant id through every read, write and shared cache of a task tracker",
+  "category": "cross-module",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

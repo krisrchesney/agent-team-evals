@@ -180,7 +180,11 @@ Done when:
 - [x] task_features.json regenerated
 
 ### T-20: Phase 1 screening (user): config A, Sonnet, 2 runs per candidate
-Status: Blocked by T-19 and the user's go (estimate first)
+Status: In progress. Batch 1 (sweep 20261101T051503Z, t22-t31): 15/20 passed; t22 0/2, t23 0/2,
+t25 1/2, the rest 2/2. Batch 2 (t32-t41) started 2026-11-01 with the user's go.
+Decision (user, 2026-11-01): t23 is dropped from the main study. Both its failures came from
+test_to_dict expecting input order for ramp steps, a convention the repo shows only weakly. The task is
+not changed after real results; it stays in tasks/ with this note.
 Why: Go/no-go. Keep tasks A passes some of the time but not always. If none, the study ends there.
 
 ### T-21: Phase 2 main sweep (user)

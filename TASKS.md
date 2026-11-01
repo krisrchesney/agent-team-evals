@@ -197,12 +197,15 @@ not changed after real results; it stays in tasks/ with this note.
 Why: Go/no-go. Keep tasks A passes some of the time but not always. If none, the study ends there.
 
 ### T-21: Phase 2 main sweep (user)
-Status: T-20 done. Screened set: t22, t25, t34, t37, t38, t39, t40 (t23, t41 dropped). More tasks in T-25.
+Status: First part done 2026-11-01: t22, t25, t34, t37, t38, t39, t40 x A, AS, D, A2, B x 5. Passes A 10/35, AS 7/34,
+D 8/34, A2 10/34, B 8/34; 4 t37 r5 runs void (5-hour limit), not yet rerun. See docs/study2-main-sweep.md. D and A2 never
+acted on these tasks. Next, needs the user's go: t42-t45 x A, AS, B x 5.
 Why: About 20 screened tasks x 5 runs x A, AS, D, A2, B (+ C on large-repo tasks). Run in batches across
 usage windows with run_sweep.ps1; estimate before each batch.
 
 ### T-25: More tasks of the kinds a single agent fails
-Status: In progress (writer sessions; branches ticket/T-25-clarify, ticket/T-25-implied)
+Status: Done. Merged 13d128f, 65eab8d. Screen (A x 2): t42-t46, t48 0/2; t47, t49 2/2. Keep t42-t45. Drop t46, t48 (debatable
+tests) and t47, t49 (pass). Tasks unchanged.
 Why: Screening kept 7 tasks; the power simulation wanted about 20. Clarify-first t42-t45 and implied-by-code
 t46-t49. Lesson from t23 and t41: every hidden rule needs one unambiguous source; where the repo shows two
 patterns, no test may pick one.

@@ -269,7 +269,7 @@ def run_stage(binary, spec, fake=None):
     return res
 
 
-_LIMIT_TEXT = re.compile(r"usage limit|rate limit|limit reached|limit will reset|resets at|out of extra usage",
+_LIMIT_TEXT = re.compile(r"usage limit|rate limit|limit reached|limit will reset|resets at|out of extra usage|hit your [^.]*limit",
                          re.I)
 
 

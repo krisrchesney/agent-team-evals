@@ -58,7 +58,7 @@ def parse_unittest_output(text, returncode):
     passed = max(total - failed - errors, 0)
     ok = returncode == 0 and total > 0 and failed == 0 and errors == 0
     return {"total": total, "passed": passed, "failed": failed, "errors": errors, "ok": ok,
-            "timed_out": False, "output_tail": text[-1500:]}
+            "timed_out": False, "output_tail": text[-1500:], "output": text}
 
 
 def grade(task, worktree):

@@ -198,7 +198,9 @@ def _run_stages(task, cfg, rec, wt_path, run_dir, tag, *, defaults, budget, subs
         read_only = st.get("mode") == "read"
         prompt = _render(st["prompt"], task_prompt=task.prompt, builder_summary=last_summary or "(none)",
                          findings=_format_findings(outputs.get("review")),
-                         test_output=test_output, **extra)
+                         test_output=test_output,
+                         questions_rule=askuser.ASK_USER_RULE if mcp_config else askuser.NO_QUESTIONS_RULE,
+                         **extra)
         name = st["name"] + tag
         spec = claude.StageSpec(
             name=name, prompt=prompt, cwd=wt_path, log_path=run_dir / f"{name}.jsonl",

@@ -12,4 +12,4 @@ $test_output
 ```
 
 Fix the code so the task is done and `python -m unittest discover -s tests -t .` passes. Do not weaken
-or delete tests to make them pass. Do not ask questions; nobody will answer.
+or delete tests to make them pass. $questions_rule

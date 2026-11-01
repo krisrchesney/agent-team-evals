@@ -18,6 +18,11 @@ TOOL_NAME = "ask_user"
 ALLOWED_TOOL = f"mcp__{SERVER_NAME}__{TOOL_NAME}"
 SERVER_FILE = Path(__file__).resolve().parent / "server.py"
 LOG_NAME = "ask_user.jsonl"
+# The $questions_rule line in configs/prompts. Runs without ask_user keep the original wording, so their
+# prompts match every earlier sweep; ask_user runs must not be told that nobody will answer.
+NO_QUESTIONS_RULE = "Do not ask questions; nobody will answer."
+ASK_USER_RULE = ("Open product decisions go to the product owner through the ask_user tool: ask about "
+                 "those instead of guessing.")
 
 
 def write_mcp_config(path, answers_path, log_path, default_answer=None):

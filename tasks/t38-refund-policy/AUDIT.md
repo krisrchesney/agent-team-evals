@@ -39,3 +39,30 @@ What makes it hard: the request reads like a finished spec. The decisions only a
 thinks about edge cases (late refunds, refunds that add up past the charge, tax on a partial amount,
 big refunds), and then has to turn each answer into exact behaviour: inclusive bounds, rounding, error
 class and param, what is stored.
+
+## Keyword self-check
+
+Matching returns every entry with at least one keyword hit, so each keyword must point at its own
+decision. Generated with `ate.askuser.server._hits` over `answers.json`: for each phrasing, the ids
+that match (want exactly the decision asked about).
+
+| Question | Decision asked | ids matched |
+|---|---|---|
+| How long after the charge can a customer still get a refund? | window | window |
+| Is there a time limit on refunds? | window | window |
+| Should refunds be refused after a certain number of days? | window | window |
+| What is the refund window, and is day 30 still allowed? | window | window |
+| What if the refund amount exceeds what is left to refund? | over_refund | over_refund |
+| Should I clamp a refund that is more than the charge down to the amount remaining? | over_refund | over_refund |
+| What happens when the total refunded would be higher than the amount charged? | over_refund | over_refund |
+| How do I split the tax on a partial refund? | tax | tax |
+| Should the tax portion be rounded, and how? | tax | tax |
+| Is the refunded tax proportional to the amount? | tax | tax |
+| How should VAT be handled across several partial refunds? | tax | tax |
+| Do large refunds need approval? | approval | approval |
+| Who has to sign off on a big refund? | approval | approval |
+| Is there a threshold above which a manager must approve? | approval | approval |
+| Which field holds the charge description? | (none: not a decision) | none |
+| Should the refund show up in the ledger? | (none: not a decision) | none |
+| What should the refund id look like? | (none: not a decision) | none |
+| Is 10000 cents or 100.00 the unit for amount? | (none: not a decision) | none |

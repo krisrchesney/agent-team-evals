@@ -35,3 +35,30 @@ defaults for the plain parts (views, ids, events, idempotence) still passes abou
 What makes it hard: the prompt reads like a complete spec, but a fee policy has five independent knobs,
 and the interactions between them (catch-up with partial payments, fees-first allocation, cap with a
 trimmed last fee) are only exact once each one is known.
+
+## Keyword self-check
+
+Matching returns every entry with at least one keyword hit, so each keyword must point at its own
+decision. Generated with `ate.askuser.server._hits` over `answers.json`: for each phrasing, the ids
+that match (want exactly the decision asked about).
+
+| Question | Decision asked | ids matched |
+|---|---|---|
+| Is there a grace period before fees start? | grace | grace |
+| How many days after the due date does the first fee kick in? | grace | grace |
+| When do fees start being charged? | grace | grace |
+| What is the fee rate, and how do I round it? | amount | amount |
+| Is the fee a percentage or a flat fee? | amount | amount |
+| Is there a minimum fee? | amount | amount |
+| Is the fee charged once or every month? | recurrence | recurrence |
+| Should fees compound on earlier fees? | recurrence | recurrence |
+| If assessment is skipped for a few weeks, do I catch up on the missed periods? | recurrence | recurrence |
+| When a customer makes a partial payment, does it go to fees or the invoice first? | allocation | allocation |
+| How should payments be applied to an invoice that has fees? | allocation | allocation |
+| Is there a maximum total of late fees per invoice? | cap | cap |
+| Should fees stop at some ceiling? | cap | cap |
+| Is there a cap on the total fees? | cap | cap |
+| What should the fee id look like? | (none: not a decision) | none |
+| Which event should fee.assess emit? | (none: not a decision) | none |
+| Does fee.assess return a list of fees? | (none: not a decision) | none |
+| Is the due date inclusive for payments? | (none: not a decision) | none |

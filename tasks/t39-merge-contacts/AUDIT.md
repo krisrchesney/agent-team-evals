@@ -32,3 +32,28 @@ A guess passes only if every decision is right: about 0.1%.
 What makes it hard: a merge looks like one small function, but every field has a collision rule and the
 duplicate record itself has to go somewhere. The prompt says "somewhere sensible" for each, which is
 true of several different designs, and only the owner's answers pick one.
+
+## Keyword self-check
+
+Matching returns every entry with at least one keyword hit, so each keyword must point at its own
+decision. Generated with `ate.askuser.server._hits` over `answers.json`: for each phrasing, the ids
+that match (want exactly the decision asked about).
+
+| Question | Decision asked | ids matched |
+|---|---|---|
+| If the two contacts have different names, which value wins? | winner | winner |
+| Which company should be kept when they disagree? | winner | winner |
+| Should the newer record override the older one? | winner | winner |
+| How should emails be combined, and are they case sensitive? | lists | lists |
+| Do I dedupe phone numbers, and how do I compare them? | lists | lists |
+| Should the merged phones keep a particular list order? | lists | lists |
+| Should the duplicate be deleted after the merge? | duplicate_record | duplicate_record |
+| What happens to the duplicate record afterwards? | duplicate_record | duplicate_record |
+| Can a merged contact be merged again? | duplicate_record | duplicate_record |
+| Is it a soft delete or a hard delete? | duplicate_record | duplicate_record |
+| What happens to the duplicate's logged calls and meetings? | activities | activities |
+| Should the activity history move to the primary? | activities | activities |
+| Where do the duplicate's activities go? | activities | activities |
+| Should the event be named contact.merged? | (none: not a decision) | none |
+| What should merge return? | (none: not a decision) | none |
+| Which error should a bad id raise? | (none: not a decision) | none |

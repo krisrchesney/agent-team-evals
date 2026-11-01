@@ -1,0 +1,9 @@
+{
+  "id": "t40-shift-swap",
+  "title": "Let staff swap shifts on a rota; the swap rules are the manager's call",
+  "category": "clarify-first",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

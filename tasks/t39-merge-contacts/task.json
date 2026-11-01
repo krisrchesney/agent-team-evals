@@ -1,0 +1,9 @@
+{
+  "id": "t39-merge-contacts",
+  "title": "Merge duplicate contacts in an address book; the merge rules are the product owner's call",
+  "category": "clarify-first",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

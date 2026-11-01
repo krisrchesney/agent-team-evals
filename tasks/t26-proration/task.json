@@ -1,0 +1,8 @@
+{
+  "id": "t26-proration",
+  "title": "Change a proration rule that is computed in five places of a billing codebase",
+  "category": "large-repo",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

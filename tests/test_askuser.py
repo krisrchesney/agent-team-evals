@@ -56,7 +56,7 @@ class TestProtocol(unittest.TestCase):
 
     def test_tools_call_answers_by_keyword(self):
         r = self.srv.handle(ask("Which currency should totals use?"))["result"]
-        self.assertEqual(r["content"], [{"type": "text", "text": "USD only."}])
+        self.assertEqual(r["content"], [{"type": "text", "text": "On currency: USD only."}])
         self.assertFalse(r["isError"])
 
     def test_no_keyword_gives_the_default_answer(self):
@@ -78,12 +78,25 @@ class TestProtocol(unittest.TestCase):
     def test_every_question_is_logged_with_its_answer_and_matched_entry(self):
         self.srv.handle(ask("Round to cents?"))
         self.srv.handle(ask("Anything else?"))
+        self.srv.handle(ask("Which currency, and how do you round?"))
         lines = [json.loads(x) for x in self.log.read_text(encoding="utf-8").splitlines()]
         self.assertEqual([(x["question"], x["answer"], x["matched"]) for x in lines],
-                         [("Round to cents?", "Whole cents.", "rounding"),
-                          ("Anything else?", "No preference; use your judgment.", None)])
-        self.assertEqual([q["matched"] for q in askuser.read_log(self.log)], ["rounding", None])
-        self.assertEqual(len(askuser.read_log(self.log, skip=1)), 1)
+                         [("Round to cents?", "On rounding: Whole cents.", ["rounding"]),
+                          ("Anything else?", "No preference; use your judgment.", []),
+                          ("Which currency, and how do you round?", "On currency: USD only.\n\nOn rounding: Whole cents.",
+                           ["currency", "rounding"])])
+        self.assertEqual([q["matched"] for q in askuser.read_log(self.log)],
+                         [["rounding"], [], ["currency", "rounding"]])
+        self.assertEqual(len(askuser.read_log(self.log, skip=1)), 2)
+
+    def test_compound_question_gets_every_answer_in_sheet_order(self):
+        r = self.srv.handle(ask("How do you round, and which currency?"))["result"]
+        self.assertEqual(r["content"][0]["text"], "On currency: USD only.\n\nOn rounding: Whole cents.")
+
+    def test_tool_text_allows_several_questions_in_one_call(self):
+        self.assertNotIn("one question", server.TOOL["description"].lower())
+        self.assertIn("several", server.TOOL["description"])
+        self.assertIn("several", server.TOOL["inputSchema"]["properties"]["question"]["description"])
 
     def test_serve_loop_reads_lines_and_survives_garbage(self):
         stdin = io.StringIO("\n".join([json.dumps(rpc("tools/list")), "not json", "[1]",
@@ -100,21 +113,22 @@ class TestMatching(unittest.TestCase):
         return server.match_answer(SHEET, q)
 
     def test_case_insensitive(self):
-        self.assertEqual(self.match("EURO or dollars?")[1], "currency")
+        self.assertEqual(self.match("EURO or dollars?")[1], ["currency"])
 
     def test_keywords_match_at_the_start_of_a_word_only(self):
-        self.assertEqual(self.match("Which side?")[1], None)  # "id" is not inside "side"
-        self.assertEqual(self.match("Is there an id column?")[1], "id")
-        self.assertEqual(self.match("Rounded how?")[1], "rounding")  # "round" starts "rounded"
+        self.assertEqual(self.match("Which side?")[1], [])  # "id" is not inside "side"
+        self.assertEqual(self.match("Is there an id column?")[1], ["id"])
+        self.assertEqual(self.match("Rounded how?")[1], ["rounding"])  # "round" starts "rounded"
 
-    def test_most_keyword_hits_wins_then_first_listed(self):
-        self.assertEqual(self.match("Round to cents in euro?")[1], "rounding")  # two hits beat one
-        self.assertEqual(self.match("Currency or round?")[1], "currency")  # tie: first listed
+    def test_every_matching_entry_answers_in_sheet_order(self):
+        self.assertEqual(self.match("Round to cents in euro?")[1], ["currency", "rounding"])
+        self.assertEqual(self.match("Round it, and is there an id?")[1], ["rounding", "id"])
+        self.assertEqual(self.match("Nothing relevant")[0], "No preference; use your judgment.")
 
     def test_multi_word_keyword(self):
         sheet = {"default": "d", "answers": [{"id": "x", "keywords": ["time  zone"], "answer": "UTC"}]}
-        self.assertEqual(server.match_answer(sheet, "Which Time Zone?"), ("UTC", "x"))
-        self.assertEqual(server.match_answer(sheet, "Which zone, time-wise?"), ("d", None))
+        self.assertEqual(server.match_answer(sheet, "Which Time Zone?"), ("On x: UTC", ["x"]))
+        self.assertEqual(server.match_answer(sheet, "Which zone, time-wise?"), ("d", []))
 
 
 class TestAnswerSheet(unittest.TestCase):
@@ -156,7 +170,7 @@ class TestStdioProcess(unittest.TestCase):
             self.assertNotIn("\r", proc.stdout)
             replies = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}
             self.assertEqual(sorted(replies), [1, 2, 3, 4])
-            self.assertEqual(replies[3]["result"]["content"][0]["text"], 'Say "Hello, <name>!".')
+            self.assertEqual(replies[3]["result"]["content"][0]["text"], 'On greeting: Say "Hello, <name>!".')
             self.assertEqual(replies[4]["result"]["content"][0]["text"], "Your call.")  # --default override
             self.assertEqual(len(askuser.read_log(log)), 2)
 
@@ -253,8 +267,9 @@ class TestPipelineDryRun(unittest.TestCase):
         rec = self.run_it("A", ["Which greeting?", "Any colour?"])
         self.assertEqual(rec["status"], "passed", rec["error"])
         self.assertEqual(rec["questions_asked"], 2)
-        self.assertEqual([(q["stage"], q["matched"]) for q in rec["questions"]], [("solve", "greeting"), ("solve", None)])
+        self.assertEqual([(q["stage"], q["matched"]) for q in rec["questions"]], [("solve", ["greeting"]), ("solve", [])])
         self.assertEqual(rec["questions"][1]["answer"], "No preference; use your judgment.")
+        self.assertEqual(rec["topics_covered"], ["greeting"])
         self.assertEqual(rec["isolation_flags"], [])
         cmd = rec["stages"][0]["command"]
         self.assertIn("--strict-mcp-config", cmd)
@@ -267,13 +282,18 @@ class TestPipelineDryRun(unittest.TestCase):
         self.assertEqual(stages, [s["name"] for s in rec["stages"] if s["name"] in ("build", "fix")])
         self.assertEqual(rec["questions_asked"], len(stages))
 
+    def test_topics_covered_are_distinct_across_stages_and_in_sheet_order(self):
+        rec = self.run_it("B", ["Which language?", "And the greeting?"], oracle=False)
+        self.assertGreater(len({q["stage"] for q in rec["questions"]}), 1)
+        self.assertEqual(rec["topics_covered"], ["greeting", "language"])  # sheet order, each once
+
     def test_no_questions_is_zero_not_missing(self):
         task = self.task()
         with tempfile.TemporaryDirectory() as tmp:
             rec = pipeline.run_one(task, config.load_config("A"), 1, defaults=config.load_defaults(), sweep_id="t",
                                    work_root=Path(tmp), results_path=Path(tmp) / "r.jsonl", binary=None,
                                    claude_version="dry-run", harness_sha=None, fake=pipeline.make_fake(task))
-        self.assertEqual((rec["questions_asked"], rec["questions"]), (0, []))
+        self.assertEqual((rec["questions_asked"], rec["questions"], rec["topics_covered"]), (0, [], []))
 
     def test_tasks_without_the_option_are_unchanged(self):
         task = tasks.load_task("t01-slugify")

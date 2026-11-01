@@ -1,0 +1,6 @@
+{
+  "log_level": "info",
+  "queue_workers": 8,
+  "queue_size": 5000,
+  "pool_name": "emails"
+}

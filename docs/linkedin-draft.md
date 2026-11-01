@@ -12,6 +12,8 @@ Then I tried to make the single agent fail. I wrote 16 more tasks, from long spe
 
 The reviewer did catch real bugs: it asked for changes 4 times in 30 team runs, and every fix turned into a pass. But on these tasks the single agent rarely left anything to catch.
 
-The sample is small: tasks I wrote myself, small repos, one model family. I'd expect teams to earn their cost on larger codebases and vaguer requests, and I haven't tested those yet.
+So I ran a second study on 11 tasks a single agent can fail, mostly rules implied by code and product decisions it had to ask about. One agent passed 15 of 55 runs. A builder plus reviewer passed 11 of 55 at about 1.5x the tokens. That gap is within chance, but the reviewer approved 35 runs that failed, and all 9 runs it flagged still failed. A second agent reading the same request can't see a rule nobody wrote down.
+
+The limits: tasks I wrote myself, Sonnet 5.5 for the second study, agents working one after another, repos up to about 3,000 lines. Parallel work and much larger codebases are still untested.
 
 Full write-up, numbers and code: https://krisrchesney.github.io/agent-team-evals/post.html

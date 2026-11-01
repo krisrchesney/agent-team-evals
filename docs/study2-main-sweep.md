@@ -87,7 +87,7 @@ Failures I judged fair: t25 (`test_flushing_empties_the_stage`), t34 (`test_bad_
   extra attempts. They do show the noise: t39 scored 3/5, 1/5 and 4/5 across three effectively identical setups.
 - **The reviewer did not rescue a run.** B's reviewer approved 27 runs and 19 of those failed the hidden tests.
   It asked for changes in 7, and all 7 still failed after the fix round. One B run was the limit-cut run above;
-  its redo also failed.
+  its redo was approved and also failed.
   This uses the recorded score, so some of those failures rest on debatable tests.
 - **Missing rules are hard to review for.** Most failures are rules that neither the visible tests nor the
   request state, so a second agent reading the same request has nothing to check them against.
@@ -136,7 +136,7 @@ B 0 and 2 (p=0.50).
   fails from one it sometimes fails.
 - **Extra agents barely raised coverage.** AS's recheck agent asked 7 more questions across 20 runs. B's reviewer
   asked none. Average coverage moved from 3.50 to 3.60 and 3.65 of 5.
-- **The reviewer rarely flagged anything.** It approved 19 of 20, and 16 of those failed. The 2 runs where it asked
+- **The reviewer rarely flagged anything.** It approved 18 of 20, and 15 of those failed. The 2 runs where it asked
   for changes also failed.
 
 ## Limits

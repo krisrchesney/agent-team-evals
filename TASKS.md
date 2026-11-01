@@ -229,7 +229,8 @@ Done when:
 - [x] Questions and answers are recorded per run; dry-run test
 
 ### T-24: Report and charts for the phase 2 study
-Status: Ready
+Status: Interim write-up published 2026-11-01 on the public page, post, README and resume (Sonnet 5.5 only). Charts and the
+final report wait for T-22 and more tasks.
 Owns: ate/report.py, scripts/plot.py
 Why: Tokens per passed run by config, pass rate against task features, and the "cheapest reliable setup"
 map, from results JSONL only.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Do Agent Teams Win?</title>
-<meta name="description" content="Results from Agent Team Evals: a single Claude Code agent against two agent teams on 21 coding tasks with hidden tests.">
+<meta name="description" content="Results from Agent Team Evals: a single Claude Code agent against agent teams in two studies on coding tasks with hidden tests.">
 <style>
 :root {
   --bg: #f7f6f2; --surface: #ffffff; --text: #1d1d1b; --muted: #5f5e58; --line: #e2e0d8; --accent: #2f5d8a;
@@ -43,12 +43,13 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line);
 <main>
 
 <h1>Do agent teams beat a single agent?</h1>
-<p class="byline">Kristopher Chesney · October 2026 · <a href="./">Project overview</a> ·
+<p class="byline">Kristopher Chesney · October 2026, updated November 2026 · <a href="./">Project overview</a> ·
 <a href="https://github.com/krisrchesney/agent-team-evals">Code and raw results</a></p>
 
-<p>Not on anything I tested. Across 21 coding tasks, one Claude Code agent passed the hidden tests as often as a
-team of agents, within the noise of a small sample, and used a fraction of the tokens. The team's extra
-reviewing and planning had almost nothing left to fix.</p>
+<p>Not on anything I've tested so far. On the first 21 coding tasks, one Claude Code agent passed the hidden tests as often as a
+team of agents, within the noise of a small sample, and used a fraction of the tokens. So I wrote harder tasks
+that a single agent can fail, and the teams still didn't pull ahead. That covers review teams working
+one after another on repos up to about 3,000 lines. I haven't tested parallel work or much larger codebases.</p>
 
 <h2>The setup</h2>
 
@@ -118,28 +119,66 @@ each:</p>
 
 <p>Counting the smoke and calibration runs, a single agent has now done 39 real runs. It failed once.</p>
 
+<h2>Update: tasks a single agent can fail</h2>
+
+<p>A team needs failures to fix, so the second study went after them. I wrote 28 more tasks, with rules only
+implied by existing code, changes across about 3,000 lines and 60 files, long multi-step specs, and requests where the
+agent has to ask about product decisions. Each got two single-agent runs. A single agent passed both on 13 tasks,
+including all four of the larger repos. I dropped 4 more because their tests were debatable, which left 11.</p>
+
+<p>Then every setup ran five times per task on Sonnet 5.5. Alongside A and B, seven tasks also got D (a fix
+round if the visible tests fail) and A2 (a second attempt if they fail). All 11 got AS, where a fresh agent re-reads the
+request and fixes what it finds.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Setup</th><th class="num">Passed, all 11 tasks</th><th class="num">Tokens per run</th><th class="num">Sign test against A</th></tr></thead>
+<tbody>
+<tr><td>A one agent</td><td class="num">15 / 55</td><td class="num">166,401</td><td class="num"></td></tr>
+<tr><td>AS with a fresh self-check</td><td class="num">11 / 55</td><td class="num">265,973</td><td class="num">p = 0.29</td></tr>
+<tr><td>B builder + reviewer</td><td class="num">11 / 55</td><td class="num">257,137</td><td class="num">p = 0.22</td></tr>
+</tbody></table></div>
+
+<p>Those gaps can't be told apart from chance, so I can't say the extra agents hurt. I can say that they used
+about 1.5 to 1.6 times the tokens and showed no gain. On the seven tasks that also ran D and A2, those two
+scored 8 and 10 of 35 against A's 10, but neither ever acted, because the visible tests always passed.</p>
+
+<p>The reviewer approved 46 of 55 runs, and 35 of those failed the hidden tests. It
+flagged the other 9, and all 9 still failed after the fix round. Most failures were rules that the request and visible
+tests never stated, and a second agent reading the same request has nothing to check them against.</p>
+
+<p>The decision tasks show one possible way in. On four tasks with a stand-in user to ask, all 11 runs that
+covered every decision passed, and one of the other 49 did. All 11 were on a single task, where the split was 11 of 11
+against 1 of 4, so this needs more tasks before it means much. The extra agents barely changed the asking:
+coverage moved from 3.50 of 5 decisions to 3.60 and 3.65.</p>
+
+<p>Part of the low pass rates is my own doing. Some hidden tests turned out to be debatable, including ones
+that fail on a reasonable reading of the repo. Dropping them, a judgement I made after seeing the results,
+lifts the first seven tasks to 22 of 35 for A, 16 for AS and 17 for B, and no setup moves ahead of A except A2, which
+behaved the same as A. Six of the 11 tasks failed in every run of every setup, so they couldn't separate anything.</p>
+
 <h2>What this shows, and what it doesn't</h2>
 
-<p>On small repos where the rules are written down somewhere, a single current agent rarely misses, so a
-reviewer and a planner mostly add tokens and time. If you pay per token, config A cost about 76k tokens per
-passed run against B's 114k and C's 197k (API-equivalent estimates: $0.066, $0.103 and $0.181).</p>
+<p>Where the rules are written down, a single current agent rarely misses, so a
+reviewer and a planner mostly add tokens and time. If you pay per token, in the pilot config A cost about 76k tokens per
+passed run against B's 114k and C's 197k (API-equivalent estimates: $0.066, $0.103 and $0.181). Where the rules aren't
+written down, one agent fails much more often, and a second agent reading the same words didn't recover them.
+Today I'd start with one agent, put the open decisions in the request or let the agent ask, and add a reviewer
+when the work can be checked against something the builder didn't have.</p>
 
-<p>The pilot has five tasks and three runs per cell, so differences under about 15
-points of pass rate are invisible at this size. Every task was written by me for this project and fits in a
-small repo. The teams run in a fixed order set by the harness, not orchestrated by the model. Everything ran on
-one model family. So this data says teams added little on these tasks, and nothing about where they might help.</p>
+<p>That last part is my inference, and these studies didn't test it. Neither did they test the setups people most often
+reach for: agents working in parallel on separate pieces, codebases too big for one context, or teams the model organizes
+itself. The harness runs agents one after another in a fixed order. The second study has 11 tasks where a simulation
+wanted about 20, all written for this project and picked to make an agent fail. Everything in it so far ran on Sonnet 5.5.</p>
 
-<h2>What would change the answer</h2>
+<h2>What comes next</h2>
 
-<p>A team needs failures to fix. The tasks most likely to produce them are ones I haven't built: rules that are
-only implied by existing code, repos far larger than one context window, and requests where the right move is
-to ask a question first. A fair test would also give the single agent the same budget, for example the best
-of two independent attempts, so any team win reflects structure rather than extra compute. If a single agent starts failing on
-tasks like those, the reviewer's 4-for-4 record in the pilot says it is the first thing worth adding back.</p>
+<p>Next is a run across Haiku 5.5 and Opus 5.5, including a cheap builder with a stronger reviewer, and then more tasks where
+the agent has to ask. A fair test of parallel work needs its own tasks and has to measure time as well as passes.</p>
 
 <footer>
-  Numbers come from the committed results files and the probe sweeps listed in
-  <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/DESIGN.md">DESIGN.md</a>, section 4.
+  Numbers come from the committed results files, the probe sweeps listed in
+  <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/DESIGN.md">DESIGN.md</a>, section 4, and the
+  <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-main-sweep.md">second study's report</a>.
   <a href="./">Back to the project overview</a>.
 </footer>
 

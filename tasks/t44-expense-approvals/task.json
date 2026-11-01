@@ -1,0 +1,9 @@
+{
+  "id": "t44-expense-approvals",
+  "title": "Add approvals to expense claims; the approval rules are the finance lead's call",
+  "category": "clarify-first",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

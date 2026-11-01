@@ -1,0 +1,25 @@
+{
+  "default": "No preference; use your judgment.",
+  "answers": [
+    {
+      "id": "notice",
+      "keywords": ["notice", "starting in", "starts in", "starting soon", "hours before", "days before", "how close", "in advance", "ahead of time", "how late", "last minute", "last-minute", "too close", "minimum time", "lead time", "how soon", "before the shift", "start of the shift", "imminent", "already started", "past shift"],
+      "answer": "A swap can only be requested at least 24 hours before the shift starts, inclusive: exactly 24 hours ahead is fine, one second less is a Conflict on param `shift`. This is checked when the swap is requested; nothing happens to existing swaps as the shift gets closer."
+    },
+    {
+      "id": "lapse",
+      "keywords": ["expire", "expires", "expiry", "expired", "lapse", "lapses", "time out", "timeout", "stale", "how long does", "unanswered", "no answer", "never answers", "no response"],
+      "answer": "A pending swap lapses at the earlier of 48 hours after it was requested and the start of the shift. From that moment (inclusive) it is `expired`, whatever operation looks at it, and it can no longer be accepted, declined or cancelled (a Conflict on param `swap`). The swap view shows that moment as `expires_at`."
+    },
+    {
+      "id": "rest",
+      "keywords": ["rest period", "rest time", "hours of rest", "enough rest", "time off between", "hours between", "back to back", "back-to-back", "double shift", "overlap", "clopen", "turnaround", "gap between", "break between", "fatigue", "already working", "already has a shift", "schedule conflict", "clash"],
+      "answer": "When accepting, the person taking the shift must have at least 10 hours between this shift and each of their other shifts (end of one to start of the next; exactly 10 hours is fine, an overlap counts as less). If not, accepting is a Conflict on param `to_staff` and the swap stays pending. It is only checked on accept, not when the swap is requested."
+    },
+    {
+      "id": "one_pending",
+      "keywords": ["second swap", "second one", "another swap", "same shift twice", "two requests", "two swaps", "several requests", "multiple requests", "several swaps", "multiple swaps", "more than one request", "more than one swap", "concurrent", "at the same time", "already pending", "one at a time", "replace", "supersede", "second request", "another request", "duplicate request"],
+      "answer": "Only one pending swap per shift. Requesting another while one is pending is refused with a Conflict on param `shift`; nothing replaces the old one. Once the first is accepted, declined, cancelled or expired, a new request is fine."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "t38-refund-policy",
+  "title": "Add partial refunds to a payments ledger; the refund policy is the product owner's call",
+  "category": "clarify-first",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

@@ -34,3 +34,28 @@ A guess passes only if every decision is right: well under 1%.
 What makes it hard: the request reads like plain state-machine work (request, accept, decline, cancel).
 The decisions are the timing and eligibility rules around it, and each has a boundary (inclusive or not)
 that the tests pin down.
+
+## Keyword self-check
+
+Matching returns every entry with at least one keyword hit, so each keyword must point at its own
+decision. Generated with `ate.askuser.server._hits` over `answers.json`: for each phrasing, the ids
+that match (want exactly the decision asked about).
+
+| Question | Decision asked | ids matched |
+|---|---|---|
+| How far in advance must a swap be requested? | notice | notice |
+| Can someone request a swap for a shift starting in an hour? | notice | notice |
+| Is there a minimum notice before the shift? | notice | notice |
+| Do pending swap requests expire? | lapse | lapse |
+| What happens if the other person never answers? | lapse | lapse |
+| How long does a request stay open before it times out? | lapse | lapse |
+| Should I check that the person taking the shift has enough rest between shifts? | rest | rest |
+| What if the new shift overlaps another of theirs? | rest | rest |
+| Is there a minimum gap between shifts for the person accepting? | rest | rest |
+| Do back-to-back shifts matter? | rest | rest |
+| Can one shift have two swap requests at the same time? | one_pending | one_pending |
+| What if someone requests a second swap on the same shift? | one_pending | one_pending |
+| Should a new request replace the pending one? | one_pending | one_pending |
+| What should the swap id look like? | (none: not a decision) | none |
+| Which event do I emit when a swap is accepted? | (none: not a decision) | none |
+| Should accepting move the shift to the other person? | (none: not a decision) | none |

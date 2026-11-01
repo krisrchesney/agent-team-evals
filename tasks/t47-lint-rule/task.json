@@ -1,0 +1,8 @@
+{
+  "id": "t47-lint-rule",
+  "title": "Add a list-numbering rule to a Markdown linter whose per-document lifecycle lives only in its code",
+  "category": "implied-by-code",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

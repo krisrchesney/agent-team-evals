@@ -184,7 +184,13 @@ Status: In progress. Batch 1 (sweep 20261101T051503Z, t22-t31): 15/20 passed; t2
 t25 1/2, the rest 2/2. Batch 2 (sweep 20261101T113613Z, t32-t41): t32-t37 9/12 (t34 1/2, t37 0/2;
 fair spec misses). t38-t41 0/8 is INVALID: ask_user connected but the harness prompt (solve.md) said
 "Do not ask questions; nobody will answer", so no run asked. Fixed in 5f81d04 ($questions_rule; other
-runs' prompts unchanged). t38-t41 need a rerun (8 runs) with the user's go.
+runs' prompts unchanged). Exclude those 8 runs from any analysis.
+Clarify rerun (sweep 20261101T142847Z, t38-t41 x 2, the user's go): 1/8 passed (t39 1/2; t38, t40, t41 0/2).
+Every run asked (one compound question each), covering 3-5 of 4-5 decisions, 0 default answers, no
+isolation flags. Fails: t38 r1 and t40 r1 never asked about one decision; the rest are repo conventions.
+To decide (user): t41 failed test_fee_view and test_catch_up_events_and_versions in both runs. The repo
+shows two record shapes (stamped invoice, unstamped payment), and one bump per caught-up fee is not in
+answers.json as AUDIT.md says, so both are debatable, like t23.
 Decision (user, 2026-11-01): t23 is dropped from the main study. Both its failures came from
 test_to_dict expecting input order for ramp steps, a convention the repo shows only weakly. The task is
 not changed after real results; it stays in tasks/ with this note.

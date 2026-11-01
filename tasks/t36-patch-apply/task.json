@@ -1,0 +1,8 @@
+{
+  "id": "t36-patch-apply",
+  "title": "Build a unified diff generator, parser and fuzzy patch applier from a written spec",
+  "category": "long-multi-step",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

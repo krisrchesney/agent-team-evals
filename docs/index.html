@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Team Evals</title>
-<meta name="description" content="Do teams of Claude Code agents beat a single agent? Pass rate on hidden tests against token usage, measured on 21 coding tasks.">
+<meta name="description" content="Do teams of Claude Code agents beat a single agent? Pass rate on hidden tests against token usage, from two studies on Claude Code.">
 <style>
 :root {
   --bg: #f7f6f2; --surface: #ffffff; --text: #1d1d1b; --muted: #5f5e58; --line: #e2e0d8;
@@ -80,17 +80,30 @@ and measures two things: how often each setup passes, and how many tokens it use
 </div>
 
 <div class="verdict">
-  <p><strong>Not settled yet: the first study was too small.</strong> In the 45-run pilot a single agent
-  passed 14 of 15 runs and both teams passed 15 of 15. One run in 15 is too few to tell a real gap
-  from chance either way, and the teams used 1.6x and 2.8x the tokens. A single agent then passed every
-  one of 13 tasks written to be hard, with Sonnet 5.5 and with the smaller Haiku 5.5, and all three
-  tasks whose rules were left out of the request and had to be found in the codebase: one failure in
-  39 single-agent runs. A second, larger study is under way with harder tasks, five runs per task for
-  each setup, and more setups and Claude models.</p>
+  <p><strong>A review team has not beaten one agent so far.</strong> The second study used 11 tasks picked
+  because a single agent can fail them. One agent passed 15 of 55 runs. A builder plus reviewer passed 11 of 55
+  at 1.5x the tokens, and an agent plus a fresh self-check passed 11 of 55 at 1.6x. These gaps can't be told
+  apart from chance, so the data doesn't show that teams are worse. It covers Sonnet 5.5 and agents working one
+  after another. Parallel work and repos too big for one agent's context are untested.</p>
 </div>
 
-<h2>The three setups</h2>
-<p>Every setup gets the same model, tools, turn limit and budget. Only the team structure differs.</p>
+<h2>Where this leaves agent teams</h2>
+<div class="table-wrap"><table>
+  <tr><th>Situation</th><th>Result</th><th>Evidence</th></tr>
+  <tr><td>Rules written in the request or repo</td><td>One agent rarely fails, so a team has little to fix</td><td>38 of 39 single-agent runs, t01–t21</td></tr>
+  <tr><td>Repos of about 3,000 lines and 60 files</td><td>One agent passed every screening run</td><td>8 of 8 runs, t26–t29</td></tr>
+  <tr><td>Rules only implied by code, or decisions only a person can make</td><td>One agent often fails, and a reviewer or self-check didn't help</td><td>15 of 55 against 11 of 55 each</td></tr>
+  <tr><td>Product decisions left open</td><td>Asking about every decision tracked passing, whichever setup asked</td><td>11 of 11 against 1 of 4, on one task (t43)</td></tr>
+  <tr><td>Parallel work, repos larger than one context, model-led teams</td><td>Not tested</td><td>None yet</td></tr>
+</table></div>
+<p style="margin-top:14px">The extra agents read the same request as the first one, so a rule nobody wrote down
+is as invisible to them. The reviewer asked for changes in 9 of 55 team runs in the second study and all 9 still
+failed. In the first study it asked 4 times in 30 runs and all 4 became passes, so review can catch mistakes
+in work that a request fully describes.</p>
+
+<h2>The setups</h2>
+<p>Every setup gets the same model, tools, turn limit and budget. Only the team structure differs. A, B and C ran
+in the first study; A and B ran again in the second, alongside three more described below.</p>
 <div class="grid">
   <div class="card"><span class="tag a">A</span><h3>Single agent</h3>
     <p>One agent reads the task, writes the code and runs the visible tests.</p>
@@ -114,6 +127,43 @@ proves each task is solvable and that its tests fail on the starting code.</p>
   <tr><td>t15–t18</td><td>Long specs: 25–36 numbered rules, 400–520 lines of reference solution</td><td class="num">88–134</td></tr>
   <tr><td>t19–t21</td><td><strong>Under-specified:</strong> a short, realistic request; the rules live in the codebase's own docs, config and code</td><td class="num">20–39</td></tr>
 </table></div>
+
+<h2>Second study: 235 runs on tasks one agent can fail</h2>
+<p>Twenty-eight new tasks (t22–t49) went through a screen of two single-agent runs each. A single agent passed
+both runs on 13 of them, and 4 more were dropped because their tests were debatable. That left 11 tasks. Each
+setup ran 5 times per task on Sonnet 5.5 (2026-11-01). Sweeps and per-task tables are in the
+<a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-main-sweep.md">full report</a>.</p>
+<div class="table-wrap"><table>
+  <tr><th>Setup</th><th>What it does</th></tr>
+  <tr><td>A</td><td>One agent</td></tr>
+  <tr><td>AS</td><td>One agent, then a fresh agent re-reads the request and fixes what it finds</td></tr>
+  <tr><td>D</td><td>One agent, plus one fix round if the visible tests fail</td></tr>
+  <tr><td>A2</td><td>Up to two independent attempts; a second only if the first fails the visible tests</td></tr>
+  <tr><td>B</td><td>Builder, reviewer, and one fix round if the reviewer asks for changes</td></tr>
+</table></div>
+<h3 style="margin-top:22px">Seven tasks with rules implied by code or spread across a long spec</h3>
+<div class="table-wrap" style="margin-top:8px"><table>
+  <tr><th></th><th class="num">A</th><th class="num">AS</th><th class="num">D</th><th class="num">A2</th><th class="num">B</th></tr>
+  <tr><td>Passed</td><td class="num">10 / 35</td><td class="num">7 / 35</td><td class="num">8 / 35</td><td class="num">10 / 35</td><td class="num">8 / 35</td></tr>
+  <tr><td>Passed, without debatable tests*</td><td class="num">22 / 35</td><td class="num">16 / 35</td><td class="num">21 / 35</td><td class="num">24 / 35</td><td class="num">17 / 35</td></tr>
+  <tr><td>Tokens per run</td><td class="num">160,959</td><td class="num">265,188</td><td class="num">152,437</td><td class="num">161,955</td><td class="num">264,897</td></tr>
+</table></div>
+<p class="note" style="margin-top:8px">*A sensitivity check, not the main result. I chose which tests to drop after seeing the results.
+D and A2 never acted, because the visible tests always passed, so both behaved like A. Their spread shows the noise.</p>
+<h3 style="margin-top:22px">Four tasks where the agent has to ask about product decisions</h3>
+<p>Here agents had a tool for asking a stand-in user, which answers from a hidden sheet.</p>
+<div class="table-wrap"><table>
+  <tr><th></th><th class="num">A</th><th class="num">AS</th><th class="num">B</th></tr>
+  <tr><td>Passed</td><td class="num">5 / 20</td><td class="num">4 / 20</td><td class="num">3 / 20</td></tr>
+  <tr><td>Tokens per run</td><td class="num">175,922</td><td class="num">267,348</td><td class="num">243,558</td></tr>
+  <tr><td>Decisions covered, of 5</td><td class="num">3.50</td><td class="num">3.60</td><td class="num">3.65</td></tr>
+</table></div>
+<ul style="margin-top:14px">
+  <li><strong>Against A on the same task and run:</strong> AS won 2 and lost 6 (sign test p = 0.29); B won 1 and lost 5 (p = 0.22). Neither gap is distinguishable from chance.</li>
+  <li><strong>The reviewer approved most failures.</strong> It approved 46 of 55 runs and 35 of those failed the hidden tests. All 9 runs it flagged still failed after the fix round.</li>
+  <li><strong>Six tasks had no room to compare.</strong> Every setup failed every run on t37, t38, t40, t42, t44 and t45, and debatable tests explain part of that on t38 and t40.</li>
+  <li><strong>Asking is the pattern to test next.</strong> All 11 runs that covered every decision passed, and all were on t43. Other runs on t43 passed 1 of 4.</li>
+</ul>
 
 <h2>Pilot: 45 runs</h2>
 <p>Tasks t01–t05, each config three times, Sonnet 5.5 (sweep <code>20261029T220931Z</code>).</p>
@@ -178,7 +228,9 @@ code, a much larger codebase, or a request where the agent has to ask.</p>
 
 <h2>Caveats</h2>
 <ul>
-  <li>Small samples: the pilot is 5 tasks × 3 runs per setup, and differences under about 15 points of pass rate are not detectable at that size.</li>
+  <li>Small samples: the pilot is 5 tasks × 3 runs per setup, and differences under about 15 points of pass rate are not detectable at that size. The second study has 11 tasks; an earlier simulation wanted about 20 to detect a 20-point gap.</li>
+  <li>Second-study results so far are Sonnet 5.5 only. Its tasks were picked to make one agent fail, so its pass rates describe those tasks, not typical work, and repeated runs of a task are not independent evidence about other tasks.</li>
+  <li>Some hidden tests are debatable and partly a flaw in the tasks. They stay in place because real results exist, and the second score above is one reviewer's judgement.</li>
   <li>One model family, tasks written for this project, and teams orchestrated in a fixed order rather than by the model.</li>
   <li>Probes are one run per task: they show whether a single agent can fail, not how often.</li>
 </ul>

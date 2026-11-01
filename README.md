@@ -10,8 +10,23 @@ pass rate on hidden tests, usage (tokens and turns), and wall-clock time.
 | B | builder + read-only reviewer, one round of fixes |
 | C | planner → builder(s) → reviewer → one fix round |
 
-**Status:** the harness runs end to end and a 45-run pilot is done (results below). See
+**Status:** the 45-run pilot and the Sonnet 5.5 part of a second study are done. See
 [DESIGN.md](DESIGN.md) for how and why, and [TASKS.md](TASKS.md) for what's next.
+
+## Second study (Sonnet 5.5, interim)
+
+11 tasks screened from 28 because a single agent can fail them, 5 runs per task and setup, 2026-11-01.
+
+| setup | passed | tokens / run | sign test against A |
+|---|---|---|---|
+| A one agent | 15 / 55 | 166,401 | |
+| AS fresh self-check | 11 / 55 | 265,973 | p = 0.29 |
+| B builder + reviewer | 11 / 55 | 257,137 | p = 0.22 |
+
+No setup beat A, and the gaps can't be told apart from chance. The reviewer approved 46 of 55 runs, 35 of which
+failed, and all 9 runs it flagged still failed. Six of the 11 tasks failed in every run, and some hidden tests are
+debatable. Parallel work and repos beyond about 3,000 lines are untested. Sweeps, per-task tables, a sensitivity score and
+limits are in [docs/study2-main-sweep.md](docs/study2-main-sweep.md).
 
 ## Pilot results
 

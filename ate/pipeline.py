@@ -162,7 +162,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
             rec["status"] = stopped  # graded for the record, but not a verdict on the config
         else:
             rec["status"] = "passed" if rec["passed"] else (stopped or "failed")
-        (run_dir / "hidden_tests.txt").write_text(t["output_tail"], encoding="utf-8")
+        (run_dir / "hidden_tests.txt").write_text(t.get("output", t["output_tail"]), encoding="utf-8")
     except Exception as exc:  # record the failure instead of killing the whole sweep
         rec["status"] = "harness_error"
         rec["error"] = f"{type(exc).__name__}: {exc}"

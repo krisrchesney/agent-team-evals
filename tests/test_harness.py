@@ -303,6 +303,10 @@ class TestSubscriptionSafety(unittest.TestCase):
         self.assertTrue(scan["rate_limited"])
         self.assertEqual(scan["api_key_source"], "none")
 
+    def test_five_hour_limit_message_counts_as_a_limit(self):
+        self.assertTrue(claude._LIMIT_TEXT.search("You've hit your 5-hour limit - resets 10:30am (America/Chicago)"))
+        self.assertFalse(claude._LIMIT_TEXT.search("hit the row limit in the query"))
+
     def test_normal_reply_is_not_a_rate_limit(self):
         with tempfile.TemporaryDirectory() as tmp:
             log = self._log(tmp, [{"type": "result", "subtype": "success", "is_error": False,

@@ -150,9 +150,12 @@ Done when:
 - [x] Dry-run tests for A2 (both paths), D (both paths), stage models; check.py passes; A, B, C commands unchanged
 
 ### T-19: Phase 1 task batch: tasks where one agent should fail sometimes
-Status: In progress (ticket/T-19-batch4). Done: t22-t37 (16 tasks). t22 here; t23-t37 by four parallel
-Sonnet 5.5 writer sessions (branches ticket/T-19-implied, -large, -cross, -long), reviewed and merged
-2026-10-31. Left: clarify-first t38-t41.
+Status: Review (ticket/T-19-batch4). Done: t22-t41 (20 tasks). t22 here; t23-t41 by five parallel
+Sonnet 5.5 writer sessions (branches ticket/T-19-implied, -large, -cross, -long, -clarify), reviewed and
+merged 2026-10-31. Clarify-first t38-t41 use ask_user. In review, natural phrasings of 4 of 22 questions
+fell through to the default answer, so keywords were added and the default now asks the agent to name
+the decision it means. Keyword matching will still miss some phrasings: the report should count
+default answers per run (questions[].matched == []) to separate matcher misses from not asking.
 Owns: tasks/t22-* and up (new)
 Why: The first study's tasks never made A fail. DESIGN 5b lists five kinds to build: rules only implied by
 code, large repos, cross-module changes, clarify-first requests (needs T-23), long multi-step features.
@@ -172,9 +175,9 @@ Candidates (one folder each; independent, so they can be written in parallel ses
   (joins and GROUP BY over CSV tables).
 - Clarify-first (need T-23): t38 to t41, ambiguous requests with a hidden answer sheet.
 Done when:
-- [ ] About 20 candidates, each validating, with an AUDIT.md mapping every hidden test to a rule in the repo
-  (16 of about 20 done; t38-t41 left)
-- [x] task_features.json regenerated (again after t38-t41)
+- [x] About 20 candidates, each validating, with an AUDIT.md mapping every hidden test to a rule in the repo
+  (20 done)
+- [x] task_features.json regenerated
 
 ### T-20: Phase 1 screening (user): config A, Sonnet, 2 runs per candidate
 Status: Blocked by T-19 and the user's go (estimate first)

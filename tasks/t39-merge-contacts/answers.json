@@ -1,24 +1,96 @@
 {
-  "default": "No preference; use your judgment.",
+  "default": "No preference on that; use your judgment. If you meant one of the open product decisions, ask about that one thing specifically, naming what it concerns.",
   "answers": [
     {
       "id": "winner",
-      "keywords": ["which value", "which name", "which company", "wins", "precedence", "overwrite", "override", "newer", "newest", "more recent", "disagree", "differ", "mismatch", "conflicting", "field value", "scalar"],
+      "keywords": [
+        "which value",
+        "which name",
+        "which company",
+        "wins",
+        "precedence",
+        "overwrite",
+        "override",
+        "newer",
+        "newest",
+        "more recent",
+        "disagree",
+        "differ",
+        "mismatch",
+        "conflicting",
+        "field value",
+        "scalar"
+      ],
       "answer": "For name and company, the value from the more recently updated of the two contacts (compare their updated_at before the merge) wins; on a tie the primary's value wins. A blank value never replaces a non-blank one, so if the winner's company is empty the other contact's company is used."
     },
     {
       "id": "lists",
-      "keywords": ["email", "emails", "phone", "phones", "union", "dedupe", "dedup", "de-dup", "normalize", "normalise", "case sensitive", "case-insensitive", "ignoring case", "digits", "same address", "same number", "list order"],
+      "keywords": [
+        "email",
+        "emails",
+        "phone",
+        "phones",
+        "union",
+        "dedupe",
+        "dedup",
+        "de-dup",
+        "normalize",
+        "normalise",
+        "case sensitive",
+        "case-insensitive",
+        "ignoring case",
+        "digits",
+        "same address",
+        "same number",
+        "list order"
+      ],
       "answer": "Emails and phones are combined into one list per kind: the primary's entries first in their current order, then the duplicate's entries that are not already there, in the duplicate's order. Emails count as the same when they match ignoring upper/lower case; phones count as the same when they have the same digits (spaces, dashes, plus signs and brackets ignored). The first-seen spelling or format is kept."
     },
     {
       "id": "duplicate_record",
-      "keywords": ["deleted after", "delete the duplicate", "remove the duplicate", "tombstone", "keep the duplicate", "soft delete", "hard delete", "archive", "after the merge", "merged_into", "still exist", "merged again", "undo", "what happens to the duplicate record"],
+      "keywords": [
+        "deleted after",
+        "delete the duplicate",
+        "remove the duplicate",
+        "tombstone",
+        "keep the duplicate",
+        "soft delete",
+        "hard delete",
+        "archive",
+        "after the merge",
+        "merged_into",
+        "still exist",
+        "merged again",
+        "undo",
+        "what happens to the duplicate record",
+        "the duplicate",
+        "duplicate contact",
+        "deleted",
+        "delete",
+        "removed",
+        "the other contact"
+      ],
       "answer": "The duplicate is not deleted. It stays as a tombstone: its `status` becomes `merged` (every contact view gets `status`, `active` normally) and its `merged_into` is the primary's id (null on other contacts). It no longer appears in contact.list; contact.retrieve still returns it. Its version and updated_at are bumped like the primary's. A merged contact cannot be used again: contact.update, activity.log and contact.merge on it are a Conflict on param `contact` (for merge, on param `primary` or `duplicate`, whichever it was). Merging a contact into itself is an InvalidRequest on param `duplicate`."
     },
     {
       "id": "activities",
-      "keywords": ["activity", "activities", "history", "interaction", "interactions", "call log", "logged", "timeline", "calls", "meetings", "reassign", "re-point", "repoint", "carry over", "transfer"],
+      "keywords": [
+        "activity",
+        "activities",
+        "history",
+        "interaction",
+        "interactions",
+        "call log",
+        "logged",
+        "timeline",
+        "calls",
+        "meetings",
+        "reassign",
+        "re-point",
+        "repoint",
+        "carry over",
+        "transfer"
+      ],
       "answer": "The duplicate's activities move to the primary: same ids, kinds, notes and times, only their contact changes to the primary's id. activity.list for the primary then shows both sets in time order (ties by id), and the duplicate's list is empty afterwards. The merge itself logs no activity."
     }
   ]

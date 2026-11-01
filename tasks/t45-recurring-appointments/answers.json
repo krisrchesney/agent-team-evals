@@ -1,0 +1,133 @@
+{
+  "default": "No preference on that; use your judgment. If you meant one of the open product decisions, ask about that one thing specifically, naming what it concerns.",
+  "answers": [
+    {
+      "id": "month_end",
+      "keywords": [
+        "31st",
+        "30th",
+        "29th",
+        "end of the month",
+        "end of month",
+        "last day of the month",
+        "shorter month",
+        "short month",
+        "february",
+        "fewer days",
+        "day of the month",
+        "month-end",
+        "month end",
+        "which day",
+        "skip a month",
+        "skip months",
+        "skipped months",
+        "clamp",
+        "roll over",
+        "rolls over",
+        "next month"
+      ],
+      "answer": "A monthly series keeps the day of month of its first occurrence. In a month that is too short for that day, the occurrence falls on that month's last day instead, but the following months go back to the original day (a series starting on 31 January meets 28 February, then 31 March, then 30 April). Time of day never changes. No month is skipped."
+    },
+    {
+      "id": "clashes",
+      "keywords": [
+        "conflict",
+        "conflicts",
+        "clash",
+        "clashes",
+        "overlap",
+        "overlaps",
+        "already booked",
+        "double book",
+        "double-book",
+        "busy",
+        "unavailable",
+        "all or nothing",
+        "all-or-nothing",
+        "one of the occurrences",
+        "some of the occurrences",
+        "skip the clashing",
+        "skip the conflicting",
+        "skip it",
+        "skip them",
+        "skip that",
+        "cannot be booked",
+        "can't be booked",
+        "taken slot",
+        "doctor is busy"
+      ],
+      "answer": "An occurrence that clashes with an existing booked appointment is skipped and the others are still booked; `count` counts every occurrence, skipped ones included. The series view lists the start times of skipped occurrences as `skipped` (same time format, in date order; an empty list when none). The exception is the first occurrence: if that one clashes, nothing is booked and series.create is a Conflict on param `start`."
+    },
+    {
+      "id": "count",
+      "keywords": [
+        "how many occurrences",
+        "how many times",
+        "how many appointments",
+        "maximum",
+        "max count",
+        "minimum",
+        "at least",
+        "at most",
+        "longest",
+        "too many",
+        "upper bound",
+        "how long can",
+        "count of 1",
+        "count of one",
+        "single occurrence",
+        "zero occurrences",
+        "limit on the count",
+        "count limit",
+        "count range",
+        "valid count"
+      ],
+      "answer": "`count` must be a whole number from 2 to 12, inclusive; anything else (including 1, 13, a float, a string or a boolean) is an InvalidRequest on param `count`. A `repeat` other than `weekly` or `monthly` is an InvalidRequest on param `repeat`."
+    },
+    {
+      "id": "cancel_scope",
+      "keywords": [
+        "cancel the series",
+        "cancelling a series",
+        "canceling a series",
+        "series.cancel",
+        "cancel a series",
+        "past appointments",
+        "already happened",
+        "already passed",
+        "future appointments",
+        "upcoming",
+        "started",
+        "in progress",
+        "remaining",
+        "rest of the series",
+        "from now on",
+        "history",
+        "earlier appointments",
+        "what does cancel",
+        "cancel do"
+      ],
+      "answer": "Cancelling a series cancels the occurrences that have not started yet (start strictly after now): those appointments become `cancelled`, as if appointment.cancel had been called on each. Occurrences that have already started or passed stay `booked`, and appointments that are not part of the series are never touched. The series becomes `cancelled`, its `appointments` still lists every appointment it booked, and cancelling a series that is already cancelled is a Conflict on param `series`."
+    },
+    {
+      "id": "one_series",
+      "keywords": [
+        "more than one series",
+        "another series",
+        "second series",
+        "two series",
+        "several series",
+        "multiple series",
+        "overlapping series",
+        "already has a series",
+        "one series",
+        "at the same time",
+        "concurrent series",
+        "per patient",
+        "each patient",
+        "same patient"
+      ],
+      "answer": "A patient can have only one active series at a time (a series is active until it is cancelled). Creating another series for that patient is a Conflict on param `patient`. After the first one is cancelled a new one is fine. Other patients are unaffected."
+    }
+  ]
+}

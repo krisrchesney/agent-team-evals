@@ -1,0 +1,132 @@
+{
+  "default": "No preference on that; use your judgment. If you meant one of the open product decisions, ask about that one thing specifically, naming what it concerns.",
+  "answers": [
+    {
+      "id": "pickup",
+      "keywords": [
+        "pick up",
+        "pickup",
+        "pick it up",
+        "collected within",
+        "collect within",
+        "collect it",
+        "how long",
+        "window",
+        "expire",
+        "expires",
+        "expiry",
+        "expired",
+        "lapse",
+        "lapses",
+        "held for",
+        "hold for",
+        "uncollected",
+        "unclaimed",
+        "never comes",
+        "doesn't come",
+        "does not come",
+        "doesn't show",
+        "no show",
+        "never shows",
+        "never turns up",
+        "doesn't turn up",
+        "holding period"
+      ],
+      "answer": "A ready hold is kept for 72 hours. Its `expires_at` is the moment it became ready plus 72 hours (it is null while the hold is waiting). From that moment (inclusive) the hold is `expired`, whatever operation looks at it, and it can no longer be collected or cancelled (a Conflict on param `hold`). When it lapses the next in line is offered the book at that same moment: their 72 hours run from then, not from whenever somebody notices, and the same goes down the line."
+    },
+    {
+      "id": "limit",
+      "keywords": [
+        "limit",
+        "maximum",
+        "max holds",
+        "how many holds",
+        "how many books",
+        "at most",
+        "cap",
+        "too many",
+        "quota",
+        "per member",
+        "per person",
+        "number of holds",
+        "allowed to hold",
+        "allowed to have"
+      ],
+      "answer": "A member can have at most 3 active holds (waiting or ready) at a time. A fourth is refused with a Conflict on param `member`. Collected, cancelled and expired holds don't count."
+    },
+    {
+      "id": "shelf",
+      "keywords": [
+        "on the shelf",
+        "shelf",
+        "available",
+        "availability",
+        "in stock",
+        "not on loan",
+        "not out",
+        "isn't out",
+        "is not out",
+        "nobody has it",
+        "no one has it",
+        "not borrowed",
+        "free copy",
+        "borrow it instead",
+        "check it out instead",
+        "straight away",
+        "immediately ready",
+        "ready at once"
+      ],
+      "answer": "Holds are only for books that are not freely available. Placing one on a book that is on the shelf with no hold on it is a Conflict on param `book` (they should just borrow it). A book that is on the shelf only because somebody's hold is ready counts as unavailable, so a hold on it is fine and waits in line."
+    },
+    {
+      "id": "same_member",
+      "keywords": [
+        "already has",
+        "already have",
+        "already borrowed",
+        "already holds",
+        "already hold",
+        "already on hold",
+        "already in line",
+        "already waiting",
+        "own loan",
+        "their own",
+        "same member",
+        "same person",
+        "same book",
+        "duplicate",
+        "twice",
+        "currently borrowed",
+        "has it on loan",
+        "has the book",
+        "have it out"
+      ],
+      "answer": "A member cannot place a hold on a book they currently have on loan, nor on a book they already have an active (waiting or ready) hold on: a Conflict on param `member` in both cases."
+    },
+    {
+      "id": "overdue",
+      "keywords": [
+        "overdue",
+        "fine",
+        "fines",
+        "owes",
+        "unreturned",
+        "not returned",
+        "past due",
+        "past their due",
+        "good standing",
+        "blocked",
+        "suspend",
+        "restrict",
+        "eligible",
+        "eligibility",
+        "allowed to place",
+        "who can place",
+        "late return",
+        "late books",
+        "late fee"
+      ],
+      "answer": "A member with any overdue loan can't place a hold: a Conflict on param `member`. A loan is overdue when it is open and now is strictly after its due time (at the due time it is not overdue yet). This is only checked when placing a hold; it does not affect holds already placed, or collecting."
+    }
+  ]
+}

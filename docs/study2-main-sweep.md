@@ -1,10 +1,11 @@
 # Study 2: main sweep on the screened tasks (interim)
 
-Status: interim, not for publication. Sonnet 5.5 only, 7 tasks, 5 runs per task for each setup.
+Status: interim working report. Sonnet 5.5 only, 11 tasks, 5 runs per task for each setup.
 
 **No setup passed more tasks than a single agent.** The sample is too small to show that a team cannot
-help, and many of the failures come from tests that are themselves debatable. Self-check (AS) and the team
-(B) each used about 1.6 times the tokens of a single agent.
+help, and many failures in the first sweep come from tests that are themselves debatable. Self-check (AS) and
+the team (B) used about 1.4 to 1.6 times the tokens of a single agent. On tasks with open product decisions,
+what separated passes from fails was whether the agent asked about every decision, not which setup it ran in.
 
 ## What ran
 
@@ -12,9 +13,9 @@ Sweeps `20261101T145209Z`, `145229Z`, `145249Z`, `145309Z`, `145330Z`, `145350Z`
 t25, t34, t37, t38, t39 and t40, by setups A, AS, D, A2 and B, by 5 runs, on 2026-11-01. That is 175 runs and
 33,926,783 tokens. One process per task ran at once, so time figures are not comparable and are left out.
 
-Four t37 r5 runs (AS, D, A2, B) hit the plan's 5-hour limit. They are void and excluded, leaving 171 runs. The
-harness recorded them as `agent_error` because its limit detector missed the wording of that message; this is
-now fixed and tested.
+Four t37 r5 runs (AS, D, A2, B) hit the plan's 5-hour limit, so they are void. The harness recorded them as
+`agent_error` because its limit detector missed the wording of that message; this is now fixed and tested. They
+were redone in sweep `20261101T171935Z` (1,329,304 tokens, all four failed), and the tables below use the redo.
 
 | Setup | What it does |
 |---|---|
@@ -33,13 +34,13 @@ Passes as recorded (every hidden test passes):
 | t22-stock-holds | 0/5 | 1/5 | 0/5 | 0/5 | 0/5 |
 | t25-pipeline-plugin | 3/5 | 3/5 | 2/5 | 3/5 | 3/5 |
 | t34-migrations | 4/5 | 3/5 | 5/5 | 3/5 | 3/5 |
-| t37-mini-sql | 0/5 | 0/4 | 0/4 | 0/4 | 0/4 |
+| t37-mini-sql | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 |
 | t38-refund-policy | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 |
 | t39-merge-contacts | 3/5 | 0/5 | 1/5 | 4/5 | 2/5 |
 | t40-shift-swap | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 |
-| **All** | **10/35** | **7/34** | **8/34** | **10/34** | **8/34** |
-| Tokens per run | 160,959 | 260,859 | 150,349 | 159,685 | 259,324 |
-| Tokens per pass | 563,358 | 1,267,032 | 638,986 | 542,931 | 1,102,128 |
+| **All** | **10/35** | **7/35** | **8/35** | **10/35** | **8/35** |
+| Tokens per run | 160,959 | 265,188 | 152,437 | 161,955 | 264,897 |
+| Tokens per pass | 563,358 | 1,325,944 | 666,913 | 566,843 | 1,158,927 |
 
 Compared with A on the same task and run number, where only one of the pair passed:
 
@@ -68,7 +69,7 @@ sensitivity check, not the primary result.**
 
 | | A | AS | D | A2 | B |
 |---|---|---|---|---|---|
-| All, without debatable tests | 22/35 | 16/34 | 21/34 | 24/34 | 17/34 |
+| All, without debatable tests | 22/35 | 16/35 | 21/35 | 24/35 | 17/35 |
 | Setup only / A only | | 3 / 9 | 4 / 5 | 6 / 4 | 2 / 7 |
 | Sign test p | | 0.15 | 1.00 | 0.75 | 0.18 |
 
@@ -77,7 +78,7 @@ significance.
 
 Failures I judged fair: t25 (`test_flushing_empties_the_stage`), t34 (`test_bad_arguments`), t39
 (`test_unknown_contacts`, `test_event`), t38's refund window (decision never asked about) and t37. t37's
-`SELECT SUM(*)` and `SelectItem.text` rules are both written in its spec, and 0 of 21 runs passed.
+`SELECT SUM(*)` and `SelectItem.text` rules are both written in its spec, and 0 of 25 runs passed.
 
 ## What the setups did
 
@@ -85,7 +86,8 @@ Failures I judged fair: t25 (`test_flushing_empties_the_stage`), t34 (`test_bad_
   tests passed every time. On these tasks both are the same as A, so they say nothing about test gates or
   extra attempts. They do show the noise: t39 scored 3/5, 1/5 and 4/5 across three effectively identical setups.
 - **The reviewer did not rescue a run.** B's reviewer approved 27 runs and 19 of those failed the hidden tests.
-  It asked for changes in 7, and all 7 still failed after the fix round. One B run ended with no verdict.
+  It asked for changes in 7, and all 7 still failed after the fix round. One B run was the limit-cut run above;
+  its redo also failed.
   This uses the recorded score, so some of those failures rest on debatable tests.
 - **Missing rules are hard to review for.** Most failures are rules that neither the visible tests nor the
   request state, so a second agent reading the same request has nothing to check them against.
@@ -106,17 +108,47 @@ both runs of every failing task.
 | t47-lint-rule | 2/2 | | Drop: passes |
 | t49-tiered-meter | 2/2 | | Drop: passes |
 
-t42 to t45 fail for the intended reason, a decision the agent did not ask about. They are the cleanest tasks so
-far. Across the study, rules shown only by code keep producing debatable tests (t22, t23, t46, t48).
+t42 to t45 fail for the intended reason, a decision the agent did not ask about. Across the study, rules shown
+only by code keep producing debatable tests (t22, t23, t46, t48).
+
+## Clarify sweep: t42 to t45
+
+Sweeps `20261101T171855Z`, `171905Z`, `171915Z` and `171925Z`: 60 runs, setups A, AS and B, 5 runs each. With the
+t37 redo, the session used 15,065,907 tokens. There were no isolation flags and no default answers.
+
+| Task | A | AS | B |
+|---|---|---|---|
+| t42-book-holds | 0/5 | 0/5 | 0/5 |
+| t43-vouchers | 5/5 | 4/5 | 3/5 |
+| t44-expense-approvals | 0/5 | 0/5 | 0/5 |
+| t45-recurring-appointments | 0/5 | 0/5 | 0/5 |
+| **All** | **5/20** | **4/20** | **3/20** |
+| Tokens per run | 175,922 | 267,348 | 243,558 |
+| Decisions covered, of 5 on average | 3.50 | 3.60 | 3.65 |
+| Questions per run | 1.00 | 1.35 | 1.10 |
+
+Against A on the same task and run: AS passed where A failed 0 times and A passed where AS failed once (p=1.00);
+B 0 and 2 (p=0.50).
+
+- **Asking every question decided the result.** Of 60 runs, 11 covered every decision and all 11 passed. The other
+  49 had 1 pass. **All 11 were on t43**, so this rests on one task; within t43 it is 11/11 against 1/4.
+- **Screening misjudged t43.** It failed 2 of 2 in screening, then A passed 5 of 5. Two runs cannot tell a task A
+  fails from one it sometimes fails.
+- **Extra agents barely raised coverage.** AS's recheck agent asked 7 more questions across 20 runs. B's reviewer
+  asked none. Average coverage moved from 3.50 to 3.60 and 3.65 of 5.
+- **The reviewer rarely flagged anything.** It approved 19 of 20, and 16 of those failed. The 2 runs where it asked
+  for changes also failed.
 
 ## Limits
 
-- 7 tasks at 5 runs per cell. The earlier simulation wanted about 20 tasks to detect a 20-point gap.
+- 11 tasks at 5 runs per cell, with D and A2 on only 7. The earlier simulation wanted about 20 tasks to detect a
+  20-point gap.
 - Sonnet 5.5 only. The Haiku and Opus part of the study has not run.
 - The second score and the list of debatable tests are one reviewer's judgement, made after the results.
 - Task writers were Sonnet agents, and the debatable tests are partly a flaw in those tasks.
 - Sign tests are unadjusted for comparing several setups, which only makes them more generous.
-- Repeated runs in `A` use the same prompt and repo, so they are not independent tasks.
+- Repeated runs of one task are not independent evidence about other tasks.
+- The reference answer sheets match by keyword, so a question can only earn an answer it happens to match.
 
 ## Harness fixes from this review
 
@@ -125,4 +157,4 @@ far. Across the study, rules shown only by code keep producing debatable tests (
   pass and fail counts were never affected. `scripts/rescore_main_sweep.py` regraded the kept worktrees, without
   any model calls, and every count matched the record.
 
-Reproduce: `python scripts/rescore_main_sweep.py <sweeps folder> results/20261101T145*.jsonl`
+Reproduce: `python scripts/rescore_main_sweep.py <sweeps folder> results/20261101T145*.jsonl results/20261101T171935Z.jsonl`

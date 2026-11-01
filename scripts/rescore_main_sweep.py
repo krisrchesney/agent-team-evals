@@ -21,6 +21,8 @@ DEBATABLE = {
     "t40-shift-swap": {"test_accept_event"},
 }
 CONFIGS = ["A", "AS", "D", "A2", "B"]
+# Redo of the t37 r5 runs cut off by the 5-hour limit, run as r1 of their own sweep.
+REDO_AS_REP5 = {"20261101T171935Z"}
 
 
 def failing_tests(root, r):
@@ -52,7 +54,8 @@ def main(root, paths):
                 failed = failing_tests(root, r)
                 strict = r["status"] == "passed"
                 lenient = strict or not (failed - DEBATABLE.get(r["task_id"], set()))
-                runs[(r["task_id"], r["config_id"], r["rep"])] = (strict, lenient, sum(r["tokens"].values()))
+                rep = 5 if r["sweep_id"] in REDO_AS_REP5 else r["rep"]
+                runs[(r["task_id"], r["config_id"], rep)] = (strict, lenient, sum(r["tokens"].values()))
     tasks = sorted({k[0] for k in runs})
     for name, idx in (("recorded", 0), ("without debatable tests", 1)):
         print(f"\n{name}")

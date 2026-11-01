@@ -199,7 +199,8 @@ Why: Go/no-go. Keep tasks A passes some of the time but not always. If none, the
 ### T-21: Phase 2 main sweep (user)
 Status: First part done 2026-11-01: t22, t25, t34, t37, t38, t39, t40 x A, AS, D, A2, B x 5. Passes A 10/35, AS 7/34,
 D 8/34, A2 10/34, B 8/34; 4 t37 r5 runs void (5-hour limit), not yet rerun. See docs/study2-main-sweep.md. D and A2 never
-acted on these tasks. Next, needs the user's go: t42-t45 x A, AS, B x 5.
+acted on these tasks. t37 r5 redone (20261101T171935Z); all failed, so AS, D, A2, B are x/35. Clarify sweep t42-t45 x A, AS, B x 5
+done (20261101T1718-1719): A 5/20, AS 4/20, B 3/20. Open: Opus and Haiku matrix (T-22) needs the user's OK; more clarify tasks.
 Why: About 20 screened tasks x 5 runs x A, AS, D, A2, B (+ C on large-repo tasks). Run in batches across
 usage windows with run_sweep.ps1; estimate before each batch.
 

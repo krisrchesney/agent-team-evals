@@ -305,6 +305,31 @@ class TestPipelineDryRun(unittest.TestCase):
         self.assertNotIn("questions_asked", rec)
         self.assertNotIn("--mcp-config", rec["stages"][0]["command"])
 
+    def prompts(self, task, cid):
+        seen = []
+        inner = pipeline.make_fake(task)
+
+        def fake(spec):
+            seen.append(spec.prompt)
+            return inner(spec)
+        with tempfile.TemporaryDirectory() as tmp:
+            pipeline.run_one(task, config.load_config(cid), 1, defaults=config.load_defaults(), sweep_id="t",
+                             work_root=Path(tmp), results_path=Path(tmp) / "r.jsonl", binary=None,
+                             claude_version="dry-run", harness_sha=None, fake=fake)
+        return seen
+
+    def test_ask_user_prompts_say_to_ask_not_that_nobody_will_answer(self):
+        for cid in ("A", "AS", "D"):
+            for p in self.prompts(self.task(), cid):
+                self.assertNotIn("nobody will answer", p)
+                self.assertNotIn("$questions_rule", p)
+            self.assertIn("ask_user tool", self.prompts(self.task(), cid)[0])
+
+    def test_other_tasks_keep_the_original_no_questions_wording(self):
+        p = self.prompts(tasks.load_task("t01-slugify"), "A")[0]
+        self.assertIn("- Do not ask questions; nobody will answer. Make a reasonable choice", p)
+        self.assertNotIn("ask_user", p)
+
     def test_broken_answer_sheet_is_a_harness_error_before_any_stage(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "task"

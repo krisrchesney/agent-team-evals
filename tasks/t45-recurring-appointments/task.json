@@ -1,0 +1,9 @@
+{
+  "id": "t45-recurring-appointments",
+  "title": "Add repeating appointments to a clinic; the series rules are the practice manager's call",
+  "category": "clarify-first",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

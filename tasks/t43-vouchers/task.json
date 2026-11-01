@@ -1,0 +1,9 @@
+{
+  "id": "t43-vouchers",
+  "title": "Add gift vouchers to a shop; the voucher rules are the shop owner's call",
+  "category": "clarify-first",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

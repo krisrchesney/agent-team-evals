@@ -31,7 +31,7 @@ def write_mcp_config(path, answers_path, log_path, default_answer=None):
 
 
 def read_log(log_path, skip=0):
-    """Questions logged so far (after the first `skip` lines) as [{question, answer, matched}]."""
+    """Questions logged so far (after the first `skip` lines) as [{question, answer, matched: [entry ids]}]."""
     p = Path(log_path)
     if not p.exists():
         return []
@@ -41,8 +41,9 @@ def read_log(log_path, skip=0):
             ev = json.loads(line)
         except json.JSONDecodeError:
             continue
+        matched = ev.get("matched") or []
         out.append({"question": ev.get("question", ""), "answer": ev.get("answer", ""),
-                    "matched": ev.get("matched")})
+                    "matched": [matched] if isinstance(matched, str) else list(matched)})
     return out
 
 

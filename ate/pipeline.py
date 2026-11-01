@@ -107,7 +107,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
     if tries > 1:
         rec["tries"] = []
     if task.ask_user:
-        rec["questions_asked"], rec["questions"] = 0, []
+        rec["questions_asked"], rec["questions"], rec["topics_covered"] = 0, [], []
     worktrees, seed = [], None
     try:
         seed, seed_sha = workspace.ensure_seed(task, work_root)
@@ -115,9 +115,10 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
         run_dir.mkdir(parents=True, exist_ok=True)
 
         mcp_config = None
+        sheet = None
         if task.ask_user:
             # Fail before any model call if the sheet is broken; the log starts empty for this run.
-            askuser.load_answers(task.answers)
+            sheet = askuser.load_answers(task.answers)
             (run_dir / askuser.LOG_NAME).write_text("", encoding="utf-8")
             mcp_config = askuser.write_mcp_config(run_dir / "mcp.json", task.answers, run_dir / askuser.LOG_NAME,
                                                   defaults.get("ask_user_default_answer"))
@@ -146,6 +147,9 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
             if stopped or visible["ok"]:
                 break
         rec["worktree"] = str(wt_path)
+        if sheet:  # distinct answer-sheet entries the agents' questions hit, in sheet order
+            hit = {m for q in rec["questions"] for m in q["matched"]}
+            rec["topics_covered"] = [e["id"] for e in sheet["answers"] if e["id"] in hit]
 
         final_tree = workspace.snapshot_tree(wt_path)
         rec["diff"] = workspace.diff_stats(wt_path, seed_sha, final_tree)

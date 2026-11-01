@@ -8,9 +8,9 @@ answers.json (hidden: it lives in the task folder, outside repo/):
   {"default": "No preference; use your judgment.",           optional
    "answers": [{"id": "currency", "keywords": ["currency", "euro"], "answer": "Whole cents, USD only."}]}
 A question matches an entry when any of its keywords occurs in it, case-insensitive, at the start of a
-word ("currenc" matches "currencies"; "id" does not match "side"). A keyword may be several words. With
-several matching entries the one with the most distinct keyword hits wins, then the first listed.
-No match: the default answer.
+word ("currenc" matches "currencies"; "id" does not match "side"). A keyword may be several words.
+Every matching entry answers, in answer-sheet order, as "On <id>: <answer>" separated by blank lines, so a
+compound question gets all its answers. No match: the default answer.
 """
 import argparse
 import json
@@ -22,11 +22,11 @@ DEFAULT_ANSWER = "No preference; use your judgment."
 PROTOCOL_VERSION = "2024-11-05"
 TOOL = {
     "name": "ask_user",
-    "description": ("Ask the person who wrote the request one question when something is genuinely "
-                    "unclear. Ask one specific question at a time. If they have no preference, you "
+    "description": ("Ask the person who wrote the request when something is genuinely unclear. You may "
+                    "ask several related questions in one call. If they have no preference, you "
                     "are told so and should use your judgment."),
     "inputSchema": {"type": "object",
-                    "properties": {"question": {"type": "string", "description": "One specific question."}},
+                    "properties": {"question": {"type": "string", "description": "Your question(s); several related ones may go in one call."}},
                     "required": ["question"]},
 }
 
@@ -57,26 +57,21 @@ def load_answers(path):
     return {"default": default, "answers": data["answers"]}
 
 
-def _hits(question, keywords):
+def _matches(question, keywords):
     q = question.lower()
-    n = 0
-    for k in set(keywords):
+    for k in keywords:
         words = re.escape(" ".join(k.lower().split())).replace(r"\ ", r"\s+")
         if re.search(r"(?<![a-z0-9])" + words, q):
-            n += 1
-    return n
+            return True
+    return False
 
 
 def match_answer(sheet, question):
-    """(answer, matched entry id or None)."""
-    best, best_hits = None, 0
-    for entry in sheet["answers"]:
-        n = _hits(question, entry["keywords"])
-        if n > best_hits:
-            best, best_hits = entry, n
-    if best is None:
-        return sheet["default"], None
-    return best["answer"], best["id"]
+    """(answer text, [ids of every matching entry, in sheet order]); the default and [] when none match."""
+    hits = [e for e in sheet["answers"] if _matches(question, e["keywords"])]
+    if not hits:
+        return sheet["default"], []
+    return "\n\n".join(f"On {e['id']}: {e['answer']}" for e in hits), [e["id"] for e in hits]
 
 
 def _ok(mid, result):

@@ -202,9 +202,13 @@
       "type": "integer",
       "description": "Only on tasks with the ask_user tool: how many times the agents called it (all stages)."
     },
+    "topics_covered": {
+      "type": "array",
+      "description": "Only on ask_user tasks: the distinct answer-sheet entry ids hit by any question in the run, in sheet order. The asked-the-right-questions measure."
+    },
     "questions": {
       "type": "array",
-      "description": "Only on ask_user tasks: one {stage, question, answer, matched} per call. matched is the answer-sheet entry id, or null when the default answer was given."
+      "description": "Only on ask_user tasks: one {stage, question, answer, matched} per call. matched is the list of answer-sheet entry ids the question hit (every one is answered), empty when the default answer was given."
     },
     "isolation_flags": {
       "type": "array",

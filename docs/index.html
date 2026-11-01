@@ -57,6 +57,7 @@ th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--li
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; }
+table.wrap td { white-space: normal; min-width: 90px; }
 .pass { color: var(--good); font-weight: 700; } .fail { color: var(--warn); font-weight: 700; }
 figure { margin: 22px 0; }
 figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
@@ -88,7 +89,7 @@ and measures two things: how often each setup passes, and how many tokens it use
 </div>
 
 <h2>Where this leaves agent teams</h2>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="wrap">
   <tr><th>Situation</th><th>Result</th><th>Evidence</th></tr>
   <tr><td>Rules written in the request or repo</td><td>One agent rarely fails, so a team has little to fix</td><td>38 of 39 single-agent runs, t01–t21</td></tr>
   <tr><td>Repos of about 3,000 lines and 60 files</td><td>One agent passed every screening run</td><td>8 of 8 runs, t26–t29</td></tr>
@@ -133,7 +134,7 @@ proves each task is solvable and that its tests fail on the starting code.</p>
 both runs on 13 of them, and 4 more were dropped because their tests were debatable. That left 11 tasks. Each
 setup ran 5 times per task on Sonnet 5.5 (2026-11-01). Sweeps and per-task tables are in the
 <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-main-sweep.md">full report</a>.</p>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="wrap">
   <tr><th>Setup</th><th>What it does</th></tr>
   <tr><td>A</td><td>One agent</td></tr>
   <tr><td>AS</td><td>One agent, then a fresh agent re-reads the request and fixes what it finds</td></tr>

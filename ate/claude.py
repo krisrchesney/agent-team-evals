@@ -158,6 +158,7 @@ class StageSpec:
     settings_file: Path = None
     json_schema: dict = None
     env: dict = None
+    mcp_config: Path = None  # the ask_user server (T-23); --strict-mcp-config keeps every other server out
 
 
 @dataclass
@@ -202,11 +203,19 @@ def build_command(binary, spec):
            "--strict-mcp-config",
            "--tools", spec.tools,
            "--allowedTools", ",".join(spec.allowed_tools)]
+    if spec.mcp_config:
+        cmd += ["--mcp-config", str(spec.mcp_config)]
     if spec.bare:
         cmd.append("--bare")
     if spec.settings_file:
         cmd += ["--settings", str(spec.settings_file)]
-    if spec.safe_mode:
+    if spec.safe_mode and spec.mcp_config:
+        # ask_user tasks (T-23): --safe-mode also drops --mcp-config (probed on the real CLI: mcp_servers [] and
+        # no ask_user tool), so it is off for these runs. The same isolation comes from loading no settings
+        # sources (no hooks, no user/project MCP or plugins) and no skills or slash commands; the harness
+        # then checks the startup event (pipeline.py, askuser.isolation_problems).
+        cmd += ["--setting-sources", "", "--disable-slash-commands"]
+    elif spec.safe_mode:
         # Subscription runs: no plugins/skills synced from the claude.ai account, no hooks, no MCP,
         # no auto-memory (which could carry notes from one run into the next). Built-in tools stay.
         cmd.append("--safe-mode")
@@ -341,6 +350,8 @@ def _redact(cmd):
     out[0] = "claude"
     if "--json-schema" in out:
         out[out.index("--json-schema") + 1] = "<schema>"
+    if "--mcp-config" in out:
+        out[out.index("--mcp-config") + 1] = "<mcp config>"
     if "--append-system-prompt" in out:
         i = out.index("--append-system-prompt") + 1
         out[i] = f"<role prompt, {len(out[i])} chars>"

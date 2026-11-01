@@ -1,0 +1,8 @@
+{
+  "id": "t37-mini-sql",
+  "title": "Build a mini SQL SELECT engine (joins, GROUP BY, HAVING, ORDER BY) over CSV tables from a spec",
+  "category": "long-multi-step",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

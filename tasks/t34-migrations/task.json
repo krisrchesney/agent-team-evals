@@ -1,0 +1,8 @@
+{
+  "id": "t34-migrations",
+  "title": "Build a SQLite schema migration runner from a written spec (ordering, rollback, checksums)",
+  "category": "long-multi-step",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

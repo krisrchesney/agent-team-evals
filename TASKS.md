@@ -188,7 +188,7 @@ runs' prompts unchanged). Exclude those 8 runs from any analysis.
 Clarify rerun (sweep 20261101T142847Z, t38-t41 x 2, the user's go): 1/8 passed (t39 1/2; t38, t40, t41 0/2).
 Every run asked (one compound question each), covering 3-5 of 4-5 decisions, 0 default answers, no
 isolation flags. Fails: t38 r1 and t40 r1 never asked about one decision; the rest are repo conventions.
-To decide (user): t41 failed test_fee_view and test_catch_up_events_and_versions in both runs. The repo
+Decision (user, 2026-11-01): t41 is dropped from the main study, task unchanged. It failed test_fee_view and test_catch_up_events_and_versions in both runs. The repo
 shows two record shapes (stamped invoice, unstamped payment), and one bump per caught-up fee is not in
 answers.json as AUDIT.md says, so both are debatable, like t23.
 Decision (user, 2026-11-01): t23 is dropped from the main study. Both its failures came from
@@ -197,9 +197,15 @@ not changed after real results; it stays in tasks/ with this note.
 Why: Go/no-go. Keep tasks A passes some of the time but not always. If none, the study ends there.
 
 ### T-21: Phase 2 main sweep (user)
-Status: Blocked by T-20
+Status: T-20 done. Screened set: t22, t25, t34, t37, t38, t39, t40 (t23, t41 dropped). More tasks in T-25.
 Why: About 20 screened tasks x 5 runs x A, AS, D, A2, B (+ C on large-repo tasks). Run in batches across
 usage windows with run_sweep.ps1; estimate before each batch.
+
+### T-25: More tasks of the kinds a single agent fails
+Status: In progress (writer sessions; branches ticket/T-25-clarify, ticket/T-25-implied)
+Why: Screening kept 7 tasks; the power simulation wanted about 20. Clarify-first t42-t45 and implied-by-code
+t46-t49. Lesson from t23 and t41: every hidden rule needs one unambiguous source; where the repo shows two
+patterns, no test may pick one.
 
 ### T-22: Phase 3 model matrix (user, Opus OK needed)
 Status: Blocked by T-21

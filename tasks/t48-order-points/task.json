@@ -1,0 +1,8 @@
+{
+  "id": "t48-order-points",
+  "title": "Add loyalty points to an order workflow whose reaction order and daily state live only in its code",
+  "category": "implied-by-code",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60
+}

@@ -150,7 +150,9 @@ Done when:
 - [x] Dry-run tests for A2 (both paths), D (both paths), stage models; check.py passes; A, B, C commands unchanged
 
 ### T-19: Phase 1 task batch: tasks where one agent should fail sometimes
-Status: In progress (ticket/T-19-batch4). Done: t22-stock-holds (implied by code, 31 hidden tests).
+Status: In progress (ticket/T-19-batch4). Done: t22-t37 (16 tasks). t22 here; t23-t37 by four parallel
+Sonnet 5.5 writer sessions (branches ticket/T-19-implied, -large, -cross, -long), reviewed and merged
+2026-10-31. Left: clarify-first t38-t41.
 Owns: tasks/t22-* and up (new)
 Why: The first study's tasks never made A fail. DESIGN 5b lists five kinds to build: rules only implied by
 code, large repos, cross-module changes, clarify-first requests (needs T-23), long multi-step features.
@@ -171,7 +173,8 @@ Candidates (one folder each; independent, so they can be written in parallel ses
 - Clarify-first (need T-23): t38 to t41, ambiguous requests with a hidden answer sheet.
 Done when:
 - [ ] About 20 candidates, each validating, with an AUDIT.md mapping every hidden test to a rule in the repo
-- [ ] task_features.json regenerated
+  (16 of about 20 done; t38-t41 left)
+- [x] task_features.json regenerated (again after t38-t41)
 
 ### T-20: Phase 1 screening (user): config A, Sonnet, 2 runs per candidate
 Status: Blocked by T-19 and the user's go (estimate first)
@@ -187,13 +190,17 @@ Status: Blocked by T-21
 Why: A with Haiku and Opus, B-hs, B-so on a 10-task subset x 3 runs.
 
 ### T-23: Stand-in user for clarify-first tasks
-Status: Ready
+Status: Done 2026-10-31 (ticket/T-23-askuser, merged into ticket/T-19-batch4). A task opts in with
+`"ask_user": true` in task.json and an answers.json beside repo/. `--safe-mode` drops `--mcp-config`
+(checked on the real CLI), so ask_user runs use `--setting-sources ""` and `--disable-slash-commands`
+instead, and the isolation check also flags skills and slash commands. Every other command is unchanged.
+Still to confirm on the first real ask_user run: the server connects, and no auto-memory carries over.
 Owns: ate/askuser/ (new local stdio MCP server), configs/defaults.json (an `ask_user` tool option)
 Why: Headless runs cannot ask questions. A tiny MCP tool answers from the task's hidden answers.json
 (keyword match, no model call) and logs each question, so "asked the right question" is measurable.
 Done when:
-- [ ] Passed with `--mcp-config` alongside `--strict-mcp-config`; the isolation check allows only this server
-- [ ] Questions and answers are recorded per run; dry-run test
+- [x] Passed with `--mcp-config` alongside `--strict-mcp-config`; the isolation check allows only this server
+- [x] Questions and answers are recorded per run; dry-run test
 
 ### T-24: Report and charts for the phase 2 study
 Status: Ready

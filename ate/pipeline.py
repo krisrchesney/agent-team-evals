@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from string import Template
 
-from . import SCHEMA_VERSION, claude, config, grade, results, workspace
+from . import SCHEMA_VERSION, askuser, claude, config, grade, results, workspace
 
 MIN_STAGE_BUDGET = 0.05  # below this, starting another stage is pointless
 # Statuses that say "this run tells us nothing about the config": re-run them with --resume,
@@ -106,11 +106,21 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
     tries = int(cfg.get("best_of", 1))
     if tries > 1:
         rec["tries"] = []
+    if task.ask_user:
+        rec["questions_asked"], rec["questions"] = 0, []
     worktrees, seed = [], None
     try:
         seed, seed_sha = workspace.ensure_seed(task, work_root)
         branch = f"run/{sweep_id}/{cfg['id']}/r{rep}{suffix.replace('__', '-')}"
         run_dir.mkdir(parents=True, exist_ok=True)
+
+        mcp_config = None
+        if task.ask_user:
+            # Fail before any model call if the sheet is broken; the log starts empty for this run.
+            askuser.load_answers(task.answers)
+            (run_dir / askuser.LOG_NAME).write_text("", encoding="utf-8")
+            mcp_config = askuser.write_mcp_config(run_dir / "mcp.json", task.answers, run_dir / askuser.LOG_NAME,
+                                                  defaults.get("ask_user_default_answer"))
 
         agents = config.load_agents(cfg.get("agents_dir"))
         config.check_agent_models(agents, defaults["model"])
@@ -128,7 +138,7 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
             worktrees.append(wt_path)
             stopped = _run_stages(task, cfg, rec, wt_path, run_dir, tag, defaults=defaults, budget=budget,
                                   subscription=subscription, env=env, agents=agents, agents_file=agents_file,
-                                  binary=binary, fake=fake)
+                                  binary=binary, fake=fake, mcp_config=mcp_config)
             if tries == 1:
                 break
             visible = grade.run_unittest(wt_path, "tests", task.test_timeout_s)
@@ -162,10 +172,10 @@ def run_one(task, cfg, rep, *, defaults, sweep_id, work_root, results_path, bina
 
 
 def _run_stages(task, cfg, rec, wt_path, run_dir, tag, *, defaults, budget, subscription, env, agents,
-                agents_file, binary, fake):
+                agents_file, binary, fake, mcp_config=None):
     """Run one attempt's stages in `wt_path`, adding their usage to `rec`. Returns why it stopped early, or None."""
     outputs, last_summary, stopped, test_output = {}, "", None, "(none)"
-    leak_needles = ["hidden_tests", "_ate_hidden", "agent-team-evals"]
+    leak_needles = ["hidden_tests", "_ate_hidden", "agent-team-evals"] + (["answers.json"] if mcp_config else [])
     for st, extra in _expand_stages(cfg, outputs):
         if st.get("run") == "visible_tests":
             # Harness-run gate (config D): run the repo's own tests, no model call. Never the hidden ones.
@@ -192,15 +202,22 @@ def _run_stages(task, cfg, rec, wt_path, run_dir, tag, *, defaults, budget, subs
             cap_api_equiv_usd=remaining, timeout_s=int(defaults["stage_timeout_s"]),
             permission_mode=defaults["permission_mode"],
             tools=st.get("tools") or defaults["tools_read" if read_only else "tools_write"],
-            allowed_tools=st.get("allowed_tools") or defaults["allowed_tools_read" if read_only else "allowed_tools_write"],
+            allowed_tools=(st.get("allowed_tools") or defaults["allowed_tools_read" if read_only else "allowed_tools_write"])
+            + ([askuser.ALLOWED_TOOL] if mcp_config else []),
             settings_file=config.settings_path(st["settings"]) if st.get("settings") else None,
             bare=not subscription, safe_mode=subscription, effort=defaults.get("effort"), env=env,
             agent=st.get("agent"), agents_file=agents_file if st.get("agent") and not subscription else None,
             role_prompt=_role_prompt(agents, st.get("agent")) if subscription else None,
             json_schema=config.load_schema(st["schema"]) if st.get("schema") else None,
+            mcp_config=mcp_config,
         )
         before = workspace.snapshot_tree(wt_path) if read_only else None
         res = claude.run_stage(binary, spec, fake=fake)
+        if mcp_config:
+            # Questions this stage asked (the log is per run; earlier stages' lines are already recorded).
+            for q in askuser.read_log(run_dir / askuser.LOG_NAME, skip=rec["questions_asked"]):
+                rec["questions"].append(dict(stage=name, **q))
+            rec["questions_asked"] = len(rec["questions"])
         if read_only and workspace.snapshot_tree(wt_path) != before:
             rec["read_only_violations"].append(name)
             workspace.restore_tree(wt_path, before)
@@ -235,7 +252,11 @@ def _run_stages(task, cfg, rec, wt_path, run_dir, tag, *, defaults, budget, subs
         extra_plugins = [pl for pl in init.get("plugins") or [] if pl.get("path") != "builtin"]
         if extra_plugins:
             rec["isolation_flags"].append(f"{st['name']}:plugins loaded: {extra_plugins}")
-        if init.get("mcp_servers"):
+        if mcp_config:
+            if fake is None:  # the dry run's fake startup event lists no servers
+                rec["isolation_flags"] += [f"{st['name']}:{p}" for p in askuser.isolation_problems(
+                    init.get("mcp_servers"), init.get("skills"), init.get("slash_commands"))]
+        elif init.get("mcp_servers"):
             rec["isolation_flags"].append(f"{st['name']}:mcp_servers loaded: {init['mcp_servers']}")
         tools = init.get("tools")
         if (fake is None and tools is not None and not read_only

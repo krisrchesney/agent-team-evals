@@ -16,6 +16,8 @@
     "PowerShell(python -m unittest *)", "PowerShell(git diff *)", "PowerShell(git status *)"],
   "tools_write": "Bash,PowerShell,Read,Edit,Write,Glob,Grep",
   "tools_read": "Bash,PowerShell,Read,Glob,Grep",
+  "ask_user_default_answer": "No preference; use your judgment.",
+  "_ask_user_comment": "Tasks with \"ask_user\": true in task.json get the ask_user tool (ate/askuser/), answered from the task's hidden answers.json. Same for every config; the default answer is what it says when no keyword matches.",
   "work_root": "D:/ate-work",
   "price_per_mtok": {
     "_source": "Sonnet 5.5 / Opus 5.5 input, output and cache-read rates from the claude-api skill table (cached 2026-10-06). cache_write assumes the usual 1.25x input rate; check it before quoting. Reference only; the per-run api_equiv_usd comes from Claude Code's total_cost_usd.",

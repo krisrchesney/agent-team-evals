@@ -1,0 +1,9 @@
+{
+  "id": "t41-late-fees",
+  "title": "Add late fees to invoices; the fee policy is the finance owner's call",
+  "category": "clarify-first",
+  "difficulty": "hard",
+  "language": "python",
+  "test_timeout_s": 60,
+  "ask_user": true
+}

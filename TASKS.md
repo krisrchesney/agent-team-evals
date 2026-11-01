@@ -181,7 +181,10 @@ Done when:
 
 ### T-20: Phase 1 screening (user): config A, Sonnet, 2 runs per candidate
 Status: In progress. Batch 1 (sweep 20261101T051503Z, t22-t31): 15/20 passed; t22 0/2, t23 0/2,
-t25 1/2, the rest 2/2. Batch 2 (t32-t41) started 2026-11-01 with the user's go.
+t25 1/2, the rest 2/2. Batch 2 (sweep 20261101T113613Z, t32-t41): t32-t37 9/12 (t34 1/2, t37 0/2;
+fair spec misses). t38-t41 0/8 is INVALID: ask_user connected but the harness prompt (solve.md) said
+"Do not ask questions; nobody will answer", so no run asked. Fixed in 5f81d04 ($questions_rule; other
+runs' prompts unchanged). t38-t41 need a rerun (8 runs) with the user's go.
 Decision (user, 2026-11-01): t23 is dropped from the main study. Both its failures came from
 test_to_dict expecting input order for ramp steps, a convention the repo shows only weakly. The task is
 not changed after real results; it stays in tasks/ with this note.

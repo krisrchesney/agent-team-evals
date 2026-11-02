@@ -14,6 +14,8 @@ The reviewer did catch real bugs: it asked for changes 4 times in 30 team runs, 
 
 So I ran a second study on 11 tasks a single agent can fail, mostly rules implied by code and product decisions it had to ask about. One agent passed 15 of 55 runs. A builder plus reviewer passed 11 of 55 at about 1.5x the tokens. That gap is within chance, but the reviewer approved 35 runs that failed, and all 9 runs it flagged still failed. A second agent reading the same request can't see a rule nobody wrote down.
 
-The limits: tasks I wrote myself, Sonnet 5.5 for the second study, agents working one after another, repos up to about 3,000 lines. Parallel work and much larger codebases are still untested.
+Then I tried other models on the same tasks, 33 runs per setup. One Sonnet agent passed 8. One Opus agent passed 6, one Haiku agent 1, and teams with an Opus reviewer or a Haiku builder 4 each at 2 to 3x the tokens. What did track passing on decision tasks was asking: all 21 runs that covered every decision passed, against 1 of the other 87.
+
+The limits: tasks I wrote myself, picked using Sonnet, agents working one after another, repos up to about 3,000 lines. Parallel work and much larger codebases are still untested.
 
 Full write-up, numbers and code: https://krisrchesney.github.io/agent-team-evals/post.html

@@ -10,7 +10,7 @@ pass rate on hidden tests, usage (tokens and turns), and wall-clock time.
 | B | builder + read-only reviewer, one round of fixes |
 | C | planner → builder(s) → reviewer → one fix round |
 
-**Status:** the 45-run pilot and the Sonnet 5.5 part of a second study are done. See
+**Status:** the 45-run pilot, the Sonnet 5.5 part of a second study and its model matrix are done. See
 [DESIGN.md](DESIGN.md) for how and why, and [TASKS.md](TASKS.md) for what's next.
 
 ## Second study (Sonnet 5.5, interim)
@@ -27,6 +27,23 @@ No setup beat A, and the gaps can't be told apart from chance. The reviewer appr
 failed, and all 9 runs it flagged still failed. Six of the 11 tasks failed in every run, and some hidden tests are
 debatable. Parallel work and repos beyond about 3,000 lines are untested. Sweeps, per-task tables, a sensitivity score and
 limits are in [docs/study2-main-sweep.md](docs/study2-main-sweep.md).
+
+## Model matrix (interim)
+
+The same 11 tasks, 3 runs per task and setup, 132 runs and 45.5M tokens, 2026-11-01. The Sonnet rows are runs 1 to 3
+from the sweeps above, not rerun.
+
+| setup | passed | tokens / run | sign test against one Sonnet |
+|---|---|---|---|
+| one agent, Sonnet | 8 / 33 | 169,668 | |
+| one agent, Opus | 6 / 33 | 163,481 | p = 0.69 |
+| Sonnet builder, Sonnet reviewer | 6 / 33 | 263,370 | |
+| Sonnet builder, Opus reviewer | 4 / 33 | 364,902 | p = 0.22 |
+| Haiku builder, Sonnet reviewer | 4 / 33 | 467,873 | p = 0.34 |
+| one agent, Haiku | 1 / 33 | 381,830 | p = 0.04 (about 0.16 adjusted) |
+
+No model or mixed team beat one Sonnet agent. On the decision tasks, all 10 runs that covered every decision passed and
+none of the other 38 did. Details and limits are in [docs/study2-model-matrix.md](docs/study2-model-matrix.md).
 
 ## Pilot results
 

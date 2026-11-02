@@ -84,8 +84,9 @@ and measures two things: how often each setup passes, and how many tokens it use
   <p><strong>A review team has not beaten one agent so far.</strong> The second study used 11 tasks picked
   because a single agent can fail them. One agent passed 15 of 55 runs. A builder plus reviewer passed 11 of 55
   at 1.5x the tokens, and an agent plus a fresh self-check passed 11 of 55 at 1.6x. These gaps can't be told
-  apart from chance, so the data doesn't show that teams are worse. It covers Sonnet 5.5 and agents working one
-  after another. Parallel work and repos too big for one agent's context are untested.</p>
+  apart from chance, so the data doesn't show that teams are worse. Changing models didn't help either: in 33 runs
+  each, no model or mixed team passed more than one Sonnet agent's 8. Agents here work one after another. Parallel
+  work and repos too big for one agent's context are untested.</p>
 </div>
 
 <h2>Where this leaves agent teams</h2>
@@ -94,7 +95,9 @@ and measures two things: how often each setup passes, and how many tokens it use
   <tr><td>Rules written in the request or repo</td><td>One agent rarely fails, so a team has little to fix</td><td>38 of 39 single-agent runs, t01–t21</td></tr>
   <tr><td>Repos of about 3,000 lines and 60 files</td><td>One agent passed every screening run</td><td>8 of 8 runs, t26–t29</td></tr>
   <tr><td>Rules only implied by code, or decisions only a person can make</td><td>One agent often fails, and a reviewer or self-check didn't help</td><td>15 of 55 against 11 of 55 each</td></tr>
-  <tr><td>Product decisions left open</td><td>Asking about every decision tracked passing, whichever setup asked</td><td>11 of 11 against 1 of 4, on one task (t43)</td></tr>
+  <tr><td>Product decisions left open</td><td>Asking about every decision tracked passing, whichever setup or model asked</td><td>21 of 21 against 1 of 87, with the full-coverage runs on two tasks (t43, t45)</td></tr>
+  <tr><td>A stronger reviewer or a cheaper builder</td><td>No gain over one Sonnet agent, at about 2 to 3x the tokens</td><td>4 of 33 each, against 8 of 33</td></tr>
+  <tr><td>A different model alone</td><td>Opus matched Sonnet within noise; Haiku passed far less</td><td>Opus 6 of 33, Haiku 1 of 33, against 8 of 33</td></tr>
   <tr><td>Parallel work, repos larger than one context, model-led teams</td><td>Not tested</td><td>None yet</td></tr>
 </table></div>
 <p style="margin-top:14px">The extra agents read the same request as the first one, so a rule nobody wrote down
@@ -162,8 +165,28 @@ D and A2 never acted, because the visible tests always passed, so both behaved l
 <ul style="margin-top:14px">
   <li><strong>Against A on the same task and run:</strong> AS won 2 and lost 6 (sign test p = 0.29); B won 1 and lost 5 (p = 0.22). Neither gap is distinguishable from chance.</li>
   <li><strong>The reviewer approved most failures.</strong> It approved 46 of 55 runs and 35 of those failed the hidden tests. All 9 runs it flagged still failed after the fix round.</li>
-  <li><strong>Six tasks had no room to compare.</strong> Every setup failed every run on t37, t38, t40, t42, t44 and t45, and debatable tests explain part of that on t38 and t40.</li>
+  <li><strong>Six tasks had no room to compare.</strong> Every Sonnet setup failed every run on t37, t38, t40, t42, t44 and t45, and debatable tests explain part of that on t38 and t40.</li>
   <li><strong>Asking is the pattern to test next.</strong> All 11 runs that covered every decision passed, and all were on t43. Other runs on t43 passed 1 of 4.</li>
+</ul>
+
+<h2>Other models: 132 runs on the same tasks</h2>
+<p>The same 11 tasks, 3 runs per task, on 2026-11-01. The Sonnet rows are runs 1 to 3 from the sweeps above, not
+rerun. Details are in the <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-model-matrix.md">model matrix report</a>.</p>
+<div class="table-wrap"><table>
+  <tr><th>Setup</th><th class="num">Passed</th><th class="num">Tokens / run</th><th class="num">vs one Sonnet</th><th class="num">Sign test</th></tr>
+  <tr><td>One agent, Sonnet</td><td class="num">8 / 33</td><td class="num">169,668</td><td class="num">1.00x</td><td class="num"></td></tr>
+  <tr><td>One agent, Opus</td><td class="num">6 / 33</td><td class="num">163,481</td><td class="num">0.96x</td><td class="num">p = 0.69</td></tr>
+  <tr><td>Sonnet builder, Sonnet reviewer</td><td class="num">6 / 33</td><td class="num">263,370</td><td class="num">1.55x</td><td class="num"></td></tr>
+  <tr><td>Sonnet builder, Opus reviewer</td><td class="num">4 / 33</td><td class="num">364,902</td><td class="num">2.15x</td><td class="num">p = 0.22</td></tr>
+  <tr><td>Haiku builder, Sonnet reviewer</td><td class="num">4 / 33</td><td class="num">467,873</td><td class="num">2.76x</td><td class="num">p = 0.34</td></tr>
+  <tr><td>One agent, Haiku</td><td class="num">1 / 33</td><td class="num">381,830</td><td class="num">2.25x</td><td class="num">p = 0.04*</td></tr>
+</table></div>
+<p class="note" style="margin-top:8px">*Sign tests compare against one Sonnet agent on the same task and run, unadjusted. Adjusted for four comparisons, Haiku's is about 0.16. With 3 runs per task, swings of 1 or 2 passes on a task are within the noise seen earlier.</p>
+<ul>
+  <li><strong>A stronger reviewer flagged more and rescued little.</strong> Opus asked for changes in 15 of 33 runs, against Sonnet's 7, and 1 of the 15 passed. It approved 18, and 15 of those failed.</li>
+  <li><strong>A Sonnet reviewer didn't rescue a Haiku builder.</strong> It approved 31 of 33 runs, and 27 of those failed. Neither run it flagged passed.</li>
+  <li><strong>Coverage of decisions again tracked passing.</strong> On the four decision tasks, all 10 runs that covered every decision passed and none of the other 38 did. Opus covered 83% of decisions and Haiku 65%. No run has covered every decision on t42 or t44.</li>
+  <li><strong>Tokens are a poor guide to plan usage across models.</strong> Opus's 5.4M tokens moved the 5-hour bar about 27 points, and Haiku's 12.6M about 2. Other sessions may have added to both.</li>
 </ul>
 
 <h2>Pilot: 45 runs</h2>

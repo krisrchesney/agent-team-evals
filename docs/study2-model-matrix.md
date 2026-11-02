@@ -60,8 +60,8 @@ the strongest signal here but not settled.
   numbers asked for changes in 7 of 33, and none passed.
 - **A Sonnet reviewer did not rescue a Haiku builder.** It asked for changes in 2 of 33 runs, and neither passed.
   It approved 31, and 27 of those failed. B-hs still beat A-Haiku, 4 to 1, but at more tokens than any other setup.
-- **Opus's two extra passes on t45 are the one place a stronger model looks different.** All 15 Sonnet A runs
-  failed t45 in the main comparison, but B-hs also passed it twice with a Haiku builder, so this may be how
+- **Opus's two extra passes on t45 are the one place a stronger model looks different.** All 15 Sonnet runs
+  on t45 in the clarify sweep failed (A, AS and B, 5 each), but B-hs also passed it twice with a Haiku builder, so this may be how
   questions happened to be worded rather than the model.
 
 ## Decisions on the clarify tasks

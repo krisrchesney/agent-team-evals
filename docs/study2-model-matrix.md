@@ -4,7 +4,7 @@ Status: interim working report. The same 11 tasks as the main sweep, 3 runs per 
 
 **No model or mixed team passed more tasks than a single Sonnet agent.** Haiku alone did clearly worse. Opus
 alone matched Sonnet within noise at about the same token count. A stronger reviewer flagged more runs but
-rescued one of 15. On the clarify tasks, every run that covered all five decisions passed, and no other run did.
+rescued one of 15. Across all seven decision tasks, covering every decision looks necessary but not enough.
 
 ## What ran
 
@@ -75,9 +75,25 @@ t42 to t45 each have 5 decisions the agent has to ask about. Over the 48 new mat
 | B-hs | 2/12 | 1.00 | 72% | 2 |
 | B-so | 3/12 | 2.17 | 82% | 3 |
 
-All 10 runs covering every decision passed, and none of the other 38 did. With the earlier clarify sweep this no
-longer rests on one task: the full-coverage passes are on t43 and t45. No run has covered every decision on t42
-or t44, so those two remain unknown. Answer sheets match by keyword, so coverage measures what the sheet
+All 10 runs covering every decision passed, and none of the other 38 did. No run has covered every decision on t42
+or t44, so those two remain unknown.
+
+That table leaves out t38, t39 and t40, which also have the ask tool and 4 decisions each. Counting every recorded
+run on all seven tasks, across the main, clarify and matrix sweeps:
+
+| Task | Covered every decision: passed | Missed a decision: passed |
+|---|---|---|
+| t38 | 0/23 | 0/14 |
+| t39 | 10/36 | 0/1 |
+| t40 | 0/26 | 0/11 |
+| t42 | none | 0/27 |
+| t43 | 17/17 | 1/10 |
+| t44 | none | 0/27 |
+| t45 | 4/4 | 0/23 |
+| **All** | **31/106** | **1/113** |
+
+So covering every decision looks necessary but not enough. Debatable tests explain part of the t38 and t40 failures
+(`test_r1_refund_view` and `test_accept_event` failed in every main-sweep run). Answer sheets match by keyword, so coverage measures what the sheet
 recognised, not exactly what the agent understood.
 
 ## Near misses

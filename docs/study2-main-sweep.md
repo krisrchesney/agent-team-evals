@@ -131,7 +131,8 @@ Against A on the same task and run: AS passed where A failed 0 times and A passe
 B 0 and 2 (p=0.50).
 
 - **Asking every question decided the result.** Of 60 runs, 11 covered every decision and all 11 passed. The other
-  49 had 1 pass. **All 11 were on t43**, so this rests on one task; within t43 it is 11/11 against 1/4.
+  49 had 1 pass. **All 11 were on t43**, so this rests on one task; within t43 it is 11/11 against 1/4. This count covers t42 to t45
+  only. On t38 and t40, runs that covered every decision still failed; see `study2-model-matrix.md` for all seven tasks.
 - **Screening misjudged t43.** It failed 2 of 2 in screening, then A passed 5 of 5. Two runs cannot tell a task A
   fails from one it sometimes fails.
 - **Extra agents barely raised coverage.** AS's recheck agent asked 7 more questions across 20 runs. B's reviewer

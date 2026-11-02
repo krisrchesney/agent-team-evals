@@ -105,12 +105,29 @@ structure differs. Later sections add a few variations and try other models.</p>
     <div class="flow">plan → build × n → review → fix?</div></div>
 </div>
 
+<h2>What gets tested</h2>
+<p>Each task is a small, made-up Python codebase plus a request, written the way a colleague might ask for a change. The
+agent edits the code, and then hidden tests it never saw grade the result. A run passes only if every hidden test
+passes, so one missed rule fails the whole run. A reference solution proves each task can be solved.</p>
+<div class="table-wrap"><table class="wrap">
+  <tr><th>Kind of task</th><th>Example request</th><th>What makes it hard</th></tr>
+  <tr><td>Written spec</td><td>"Build a mini SQL engine over folders of CSV files; the spec describes the exact behaviour."</td><td>Getting every rule in a long document right</td></tr>
+  <tr><td>Bug hunt</td><td>"Customers report wrong totals from this shopping-cart library. Fix it to meet the spec."</td><td>Finding every cause from the symptoms</td></tr>
+  <tr><td>Rules in the repo's docs</td><td>"Add refunds to the payments service; the API is in docs/API.md."</td><td>Finding the rules without being told where they are</td></tr>
+  <tr><td>Rules implied by code</td><td>"Add stock holds to this inventory service. Build it the way the rest is built."</td><td>Copying conventions that are shown only by how the existing code works</td></tr>
+  <tr><td>Larger repo</td><td>Change one billing rule that's computed in five places across about 3,000 lines</td><td>Finding every place that needs the change</td></tr>
+  <tr><td>Open decisions</td><td>"Add repeating appointments to the clinic. Several decisions are open: ask instead of guessing."</td><td>Noticing what to ask</td></tr>
+</table></div>
+<h3 style="margin-top:22px">One task up close: repeating appointments</h3>
+<p>The request names the new operations and says the practice manager can be asked about open decisions. It doesn't say
+what a monthly appointment on the 31st does in a shorter month, or what happens when one date clashes with an existing
+booking. An agent can ask a stand-in manager, which answers from a hidden sheet: the appointment moves to the month's
+last day, and a clashing date is skipped while the others still get booked. Hidden tests check each of those rules, so
+an agent that guesses differently can write tidy, working code and still fail.</p>
+
 <h2>First study: tasks with the rules written down</h2>
 <p>The first study compared those three setups, then kept making the tasks harder to see whether one agent could be
 made to fail.</p>
-<p>Each task is a small, made-up codebase plus a request. Agents never see the hidden tests that grade
-the result, and every hidden test traces to a rule the agent could have read. A reference solution
-proves each task is solvable and that its tests fail on the starting code.</p>
 <div class="table-wrap"><table>
   <tr><th>Tasks</th><th>What they are</th><th class="num">Hidden tests each</th></tr>
   <tr><td>t01–t05</td><td>Small features, a multi-file CLI, a bug hunt, an ambiguous spec</td><td class="num">10–28</td></tr>
@@ -175,7 +192,8 @@ code, a much larger codebase, or a request where the agent has to ask.</p>
 <h2>Second study: 235 runs on tasks one agent can fail</h2>
 <p>A team needs failures to fix, so the second study went looking for them. Twenty-eight new tasks (t22–t49) went through a screen of two single-agent runs each. A single agent passed
 both runs on 13 of them, and 4 more were dropped because their tests were debatable. That left 11 tasks. Each
-setup ran 5 times per task on Sonnet 5.5 (2026-11-01). Sweeps and per-task tables are in the
+setup ran 5 times per task on Sonnet 5.5 (2026-11-01). Of the 11, two have rules implied by code, two are long
+specs, and seven have open decisions. Sweeps and per-task tables are in the
 <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-main-sweep.md">full report</a>.</p>
 <div class="table-wrap"><table class="wrap">
   <tr><th>Setup</th><th>What it does</th></tr>
@@ -185,7 +203,7 @@ setup ran 5 times per task on Sonnet 5.5 (2026-11-01). Sweeps and per-task table
   <tr><td>A2</td><td>Up to two independent attempts; a second only if the first fails the visible tests</td></tr>
   <tr><td>B</td><td>Builder, reviewer, and one fix round if the reviewer asks for changes</td></tr>
 </table></div>
-<h3 style="margin-top:22px">Seven tasks with rules implied by code or spread across a long spec</h3>
+<h3 style="margin-top:22px">The first seven tasks: rules implied by code, long specs and open decisions</h3>
 <div class="table-wrap" style="margin-top:8px"><table>
   <tr><th></th><th class="num">A</th><th class="num">AS</th><th class="num">D</th><th class="num">A2</th><th class="num">B</th></tr>
   <tr><td>Passed</td><td class="num">10 / 35</td><td class="num">7 / 35</td><td class="num">8 / 35</td><td class="num">10 / 35</td><td class="num">8 / 35</td></tr>
@@ -194,8 +212,8 @@ setup ran 5 times per task on Sonnet 5.5 (2026-11-01). Sweeps and per-task table
 </table></div>
 <p class="note" style="margin-top:8px">*A sensitivity check, not the main result. I chose which tests to drop after seeing the results.
 D and A2 never acted, because the visible tests always passed, so both behaved like A. Their spread shows the noise.</p>
-<h3 style="margin-top:22px">Four tasks where the agent has to ask about product decisions</h3>
-<p>Here agents had a tool for asking a stand-in user, which answers from a hidden sheet.</p>
+<h3 style="margin-top:22px">Four more tasks with open decisions</h3>
+<p>On all seven decision tasks, agents had the tool for asking a stand-in user.</p>
 <div class="table-wrap"><table>
   <tr><th></th><th class="num">A</th><th class="num">AS</th><th class="num">B</th></tr>
   <tr><td>Passed</td><td class="num">5 / 20</td><td class="num">4 / 20</td><td class="num">3 / 20</td></tr>
@@ -206,7 +224,7 @@ D and A2 never acted, because the visible tests always passed, so both behaved l
   <li><strong>Against A on the same task and run:</strong> AS won 2 and lost 6 (sign test p = 0.29); B won 1 and lost 5 (p = 0.22). Neither gap is distinguishable from chance.</li>
   <li><strong>The reviewer approved most failures.</strong> It approved 46 of 55 runs and 35 of those failed the hidden tests. All 9 runs it flagged still failed after the fix round.</li>
   <li><strong>Six tasks had no room to compare.</strong> Every Sonnet setup failed every run on t37, t38, t40, t42, t44 and t45, and debatable tests explain part of that on t38 and t40.</li>
-  <li><strong>Asking is the pattern to test next.</strong> All 11 runs that covered every decision passed, and all were on t43. Other runs on t43 passed 1 of 4.</li>
+  <li><strong>Asking helped but wasn't enough.</strong> On these four tasks, all 11 runs that covered every decision passed, all on t43. But on t38 and t40, runs that covered every decision still failed, partly because of debatable tests.</li>
 </ul>
 
 <h2>Other models: 132 runs on the same tasks</h2>
@@ -225,7 +243,7 @@ rerun. Details are in the <a href="https://github.com/krisrchesney/agent-team-ev
 <ul>
   <li><strong>A stronger reviewer flagged more and rescued little.</strong> Opus asked for changes in 15 of 33 runs, against Sonnet's 7, and 1 of the 15 passed. It approved 18, and 15 of those failed.</li>
   <li><strong>A Sonnet reviewer didn't rescue a Haiku builder.</strong> It approved 31 of 33 runs, and 27 of those failed. Neither run it flagged passed.</li>
-  <li><strong>Coverage of decisions again tracked passing.</strong> On the four decision tasks, all 10 runs that covered every decision passed and none of the other 38 did. Opus covered 83% of decisions and Haiku 65%. No run has covered every decision on t42 or t44.</li>
+  <li><strong>Covering every decision looks necessary, but not enough.</strong> Across all seven decision tasks and every model, 1 of 113 runs that missed a decision passed, and 31 of 106 that covered them all passed. None of the 49 full-coverage runs on t38 and t40 passed, and debatable tests explain part of that. No run has covered every decision on t42 or t44. On the last four tasks, Opus covered 83% of decisions and Haiku 65%.</li>
   <li><strong>Tokens are a poor guide to plan usage across models.</strong> Opus's 5.4M tokens moved the 5-hour bar about 27 points, and Haiku's 12.6M about 2. Other sessions may have added to both.</li>
 </ul>
 
@@ -235,7 +253,7 @@ rerun. Details are in the <a href="https://github.com/krisrchesney/agent-team-ev
   <tr><td>Rules written in the request or repo</td><td>One agent rarely fails, so a team has little to fix</td><td>38 of 39 single-agent runs, t01–t21</td></tr>
   <tr><td>Repos of about 3,000 lines and 60 files</td><td>One agent passed every screening run</td><td>8 of 8 runs, t26–t29</td></tr>
   <tr><td>Rules only implied by code, or decisions only a person can make</td><td>One agent often fails, and a reviewer or self-check didn't help</td><td>15 of 55 against 11 of 55 each</td></tr>
-  <tr><td>Product decisions left open</td><td>Asking about every decision tracked passing, whichever setup or model asked</td><td>21 of 21 against 1 of 87, with the full-coverage runs on two tasks (t43, t45)</td></tr>
+  <tr><td>Product decisions left open</td><td>Runs almost never passed without covering every decision, and many that covered them still failed</td><td>31 of 106 against 1 of 113, on seven tasks</td></tr>
   <tr><td>A stronger reviewer or a cheaper builder</td><td>No gain over one Sonnet agent, at about 2 to 3x the tokens</td><td>4 of 33 each, against 8 of 33</td></tr>
   <tr><td>A different model alone</td><td>Opus matched Sonnet within noise; Haiku passed far less</td><td>Opus 6 of 33, Haiku 1 of 33, against 8 of 33</td></tr>
   <tr><td>Parallel work, repos larger than one context, model-led teams</td><td>Not tested</td><td>None yet</td></tr>

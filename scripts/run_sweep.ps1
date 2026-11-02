@@ -19,6 +19,7 @@ param(
     [string]$Tasks = "all",
     [string]$Configs = "A,B,C",
     [int]$Reps = 3,
+    [string]$Model = "",          # override the sweep model (A on Haiku or Opus); mixed configs fix their own
     [double]$RunCap = 1.5,        # runaway-loop cap per run, API-equivalent dollars (not a spending limit)
     [double]$TotalCap = 15,       # runaway-loop cap for the whole sweep, API-equivalent dollars
     [int]$MaxHours = 8,
@@ -37,6 +38,7 @@ $resume = $null
 while ($true) {
     $argv = @("-m", "ate", "run", "--tasks", $Tasks, "--configs", $Configs, "--reps", $Reps,
               "--run-cap", $RunCap, "--max-total-api-equiv", $TotalCap)
+    if ($Model) { $argv += @("--model", $Model) }
     if ($DryRun) { $argv += @("--dry-run", "--oracle") } else { $argv += "--yes" }
     if ($resume) { $argv += @("--resume", $resume) }
 

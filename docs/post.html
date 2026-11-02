@@ -156,6 +156,36 @@ that fail on a reasonable reading of the repo. Dropping them, a judgement I made
 lifts the first seven tasks to 22 of 35 for A, 16 for AS and 17 for B, and no setup moves ahead of A except A2, which
 behaved the same as A. Six of the 11 tasks failed in every run of every setup, so they couldn't separate anything.</p>
 
+<h2>Update: other models</h2>
+
+<p>Maybe the reviewer wasn't strong enough, or a cheap builder with a good reviewer would match a better builder. So
+the same 11 tasks ran three more times each on Haiku 5.5 and Opus 5.5, for 132 runs. The Sonnet rows are the first three
+runs from the sweeps above, not a rerun.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Setup</th><th class="num">Passed</th><th class="num">Tokens per run</th><th class="num">Sign test against one Sonnet</th></tr></thead>
+<tbody>
+<tr><td>One agent, Sonnet</td><td class="num">8 / 33</td><td class="num">169,668</td><td class="num"></td></tr>
+<tr><td>One agent, Opus</td><td class="num">6 / 33</td><td class="num">163,481</td><td class="num">p = 0.69</td></tr>
+<tr><td>Sonnet builder, Sonnet reviewer</td><td class="num">6 / 33</td><td class="num">263,370</td><td class="num"></td></tr>
+<tr><td>Sonnet builder, Opus reviewer</td><td class="num">4 / 33</td><td class="num">364,902</td><td class="num">p = 0.22</td></tr>
+<tr><td>Haiku builder, Sonnet reviewer</td><td class="num">4 / 33</td><td class="num">467,873</td><td class="num">p = 0.34</td></tr>
+<tr><td>One agent, Haiku</td><td class="num">1 / 33</td><td class="num">381,830</td><td class="num">p = 0.04</td></tr>
+</tbody></table></div>
+
+<p>Haiku's p value isn't adjusted for making four comparisons; adjusted, it's about 0.16. It's the strongest signal here,
+and it isn't settled. Haiku had passed all five of its runs on the first study's tasks, so these harder tasks are where it
+falls behind.</p>
+
+<p>The Opus reviewer asked for changes in 15 of 33 runs, about twice as often as the Sonnet reviewer's 7, and 1 of those 15
+passed. It approved 18 runs, and 15 of those failed. A Sonnet reviewer did no better over a Haiku builder: it approved 31
+runs, 27 of which failed, and neither run it flagged passed.</p>
+
+<p>The decision tasks held up. All 10 new runs that covered every decision passed, and none of the other 38 did. Those
+full-coverage runs now span two tasks, t43 and t45, so the pattern no longer rests on one. Across both sweeps that's 21 of 21
+against 1 of 87. Opus covered 83% of the decisions and Haiku 65%, so a stronger model may help mainly by asking more, but
+the sample is small, and no run has covered every decision on t42 or t44.</p>
+
 <h2>What this shows, and what it doesn't</h2>
 
 <p>Where the rules are written down, a single current agent rarely misses, so a
@@ -168,17 +198,19 @@ when the work can be checked against something the builder didn't have.</p>
 <p>That last part is my inference, and these studies didn't test it. Neither did they test the setups people most often
 reach for: agents working in parallel on separate pieces, codebases too big for one context, or teams the model organizes
 itself. The harness runs agents one after another in a fixed order. The second study has 11 tasks where a simulation
-wanted about 20, all written for this project and picked to make an agent fail. Everything in it so far ran on Sonnet 5.5.</p>
+wanted about 20, all written for this project and picked to make an agent fail, using Sonnet to do the picking, which may
+tilt the comparison toward it. The other models got 3 runs per task and Sonnet's baseline wasn't rerun alongside them.</p>
 
 <h2>What comes next</h2>
 
-<p>Next is a run across Haiku 5.5 and Opus 5.5, including a cheap builder with a stronger reviewer, and then more tasks where
-the agent has to ask. A fair test of parallel work needs its own tasks and has to measure time as well as passes.</p>
+<p>Next are ten more tasks where the agent has to ask, already written and waiting to be screened. After that comes a test of
+parallel work, which needs its own tasks and has to measure time as well as passes.</p>
 
 <footer>
   Numbers come from the committed results files, the probe sweeps listed in
   <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/DESIGN.md">DESIGN.md</a>, section 4, and the
-  <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-main-sweep.md">second study's report</a>.
+  <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-main-sweep.md">second study's report</a> and
+  <a href="https://github.com/krisrchesney/agent-team-evals/blob/master/docs/study2-model-matrix.md">model matrix report</a>.
   <a href="./">Back to the project overview</a>.
 </footer>
 

@@ -42,8 +42,8 @@ from the sweeps above, not rerun.
 | Haiku builder, Sonnet reviewer | 4 / 33 | 467,873 | p = 0.34 |
 | one agent, Haiku | 1 / 33 | 381,830 | p = 0.04 (about 0.16 adjusted) |
 
-No model or mixed team beat one Sonnet agent. On the decision tasks, all 10 runs that covered every decision passed and
-none of the other 38 did. Details and limits are in [docs/study2-model-matrix.md](docs/study2-model-matrix.md).
+No model or mixed team beat one Sonnet agent. Across all seven decision tasks and every model, 1 of 113 runs that missed a
+decision passed and 31 of 106 that covered them all passed. Details and limits are in [docs/study2-model-matrix.md](docs/study2-model-matrix.md).
 
 ## Pilot results
 

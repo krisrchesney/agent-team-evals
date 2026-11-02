@@ -146,10 +146,10 @@ scored 8 and 10 of 35 against A's 10, but neither ever acted, because the visibl
 flagged the other 9, and all 9 still failed after the fix round. Most failures were rules that the request and visible
 tests never stated, and a second agent reading the same request has nothing to check them against.</p>
 
-<p>The decision tasks show one possible way in. On four tasks with a stand-in user to ask, all 11 runs that
-covered every decision passed, and one of the other 49 did. All 11 were on a single task, where the split was 11 of 11
-against 1 of 4, so this needs more tasks before it means much. The extra agents barely changed the asking:
-coverage moved from 3.50 of 5 decisions to 3.60 and 3.65.</p>
+<p>The decision tasks show one possible way in. On the last four, all 11 runs that covered every decision passed,
+and one of the other 49 did. All 11 were on a single task, though, and on two of the earlier decision tasks, t38 and t40,
+runs that covered every decision still failed, partly because of debatable tests. The extra agents barely changed the
+asking on the last four: coverage moved from 3.50 of 5 decisions to 3.60 and 3.65.</p>
 
 <p>Part of the low pass rates is my own doing. Some hidden tests turned out to be debatable, including ones
 that fail on a reasonable reading of the repo. Dropping them, a judgement I made after seeing the results,
@@ -181,10 +181,10 @@ falls behind.</p>
 passed. It approved 18 runs, and 15 of those failed. A Sonnet reviewer did no better over a Haiku builder: it approved 31
 runs, 27 of which failed, and neither run it flagged passed.</p>
 
-<p>The decision tasks held up. All 10 new runs that covered every decision passed, and none of the other 38 did. Those
-full-coverage runs now span two tasks, t43 and t45, so the pattern no longer rests on one. Across both sweeps that's 21 of 21
-against 1 of 87. Opus covered 83% of the decisions and Haiku 65%, so a stronger model may help mainly by asking more, but
-the sample is small, and no run has covered every decision on t42 or t44.</p>
+<p>Across all seven decision tasks and every model, covering every decision looks necessary but not enough: 1 of 113 runs
+that missed a decision passed, and 31 of 106 that covered them all passed. None of the 49 full-coverage runs on t38 and t40
+passed, and debatable tests explain part of that. On the last four tasks, Opus covered 83% of the decisions and Haiku 65%, so
+a stronger model may ask more, but the sample is small, and no run has covered every decision on t42 or t44.</p>
 
 <h2>What this shows, and what it doesn't</h2>
 

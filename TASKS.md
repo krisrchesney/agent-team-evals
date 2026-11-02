@@ -212,8 +212,8 @@ t46-t49. Lesson from t23 and t41: every hidden rule needs one unambiguous source
 patterns, no test may pick one.
 
 ### T-22: Phase 3 model matrix (user, Opus OK needed)
-Status: Blocked by T-21
-Why: A with Haiku and Opus, B-hs, B-so on a 10-task subset x 3 runs.
+Status: Done 2026-11-01 (20261101T2241-2322, 132 runs, 45.5M tokens): A-Haiku 1/33, A-Opus 6/33, B-hs 4/33, B-so 4/33, against A-Sonnet 8/33 and B 6/33. docs/study2-model-matrix.md.
+Why: A with Haiku and Opus, B-hs, B-so on all 11 main-sweep tasks x 3 runs, so runs pair with the Sonnet data.
 
 ### T-23: Stand-in user for clarify-first tasks
 Status: Done 2026-10-31 (ticket/T-23-askuser, merged into ticket/T-19-batch4). A task opts in with

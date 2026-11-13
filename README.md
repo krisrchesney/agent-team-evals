@@ -10,6 +10,8 @@ pass rate on hidden tests, usage (tokens and turns), and wall-clock time.
 | B | builder + read-only reviewer, one round of fixes |
 | C | planner → builder(s) → reviewer → one fix round |
 
+**Why this exists, in plain language:** [WHY.md](WHY.md)
+
 **Status:** the 45-run pilot, the Sonnet 5.5 part of a second study and its model matrix are done. See
 [DESIGN.md](DESIGN.md) for how and why, and [TASKS.md](TASKS.md) for what's next.
 
